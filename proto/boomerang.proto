@@ -1,0 +1,76 @@
+syntax = "proto3";
+
+package boomerang.v1;
+
+option java_package = "com.boomerang.proto";
+option java_multiple_files = true;
+
+// Core Task Configuration
+message Task {
+  string task_id = 1;
+  bytes payload = 2;
+  int64 interval_ms = 3;
+  bool repeat = 4;
+  CallbackConfig callback = 5;
+  string namespace = 6;
+  int64 created_at = 7;
+}
+
+// Multi-protocol Callback Configuration
+message CallbackConfig {
+  enum Protocol {
+    TCP = 0;
+    GRPC = 1;
+    HTTP = 2;
+    UDP = 3;
+  }
+  Protocol protocol = 1;
+  string endpoint = 2; // e.g. "127.0.0.1:8080" or "https://api.example.com/callback"
+  RetryPolicy retry_policy = 3;
+}
+
+message RetryPolicy {
+  int32 max_attempts = 1;
+  int64 initial_backoff_ms = 2;
+  double backoff_multiplier = 3;
+}
+
+// Inbound Request Messages
+message RegisterTaskRequest {
+  bytes payload = 1;
+  int64 interval_ms = 2;
+  bool repeat = 3;
+  CallbackConfig callback = 4;
+  string auth_token = 5;
+  string namespace = 6;
+}
+
+message CancelTaskRequest {
+  string task_id = 1;
+  string auth_token = 2;
+}
+
+message GetTaskRequest {
+  string task_id = 1;
+  string auth_token = 2;
+}
+
+// Inbound Response Messages
+message TaskResponse {
+  enum Status {
+    OK = 0;
+    ERROR = 1;
+    UNAUTHORIZED = 2;
+  }
+  Status status = 1;
+  string message = 2;
+  Task task = 3;
+}
+
+// Callback Message (Server to Client)
+message BoomerangCallback {
+  string task_id = 1;
+  bytes payload = 2;
+  int64 timestamp = 3;
+  int32 attempt = 4;
+}
