@@ -1,0 +1,100 @@
+syntax = "proto3";
+
+package boomerang;
+
+option java_package = "io.boomerang.proto";
+option java_multiple_files = true;
+
+// Envelope for all communication over raw TCP.
+// All requests after AuthHandshake MUST include a session_id.
+message BoomerangEnvelope {
+    string session_id = 1;            // Unique identifier for the client's session
+    oneof payload {
+        AuthHandshake auth_handshake = 2;
+        AuthResponse auth_response = 3;
+        Task registration_request = 4;
+        RegistrationResponse registration_response = 5;
+        CancellationRequest cancellation_request = 6;
+        CancellationResponse cancellation_response = 7;
+        SessionRefreshRequest session_refresh = 8;
+        SessionRefreshResponse session_refresh_response = 9;
+    }
+}
+
+// Handshake establishes the session and its configuration.
+message AuthHandshake {
+    string auth_token = 1;
+    CallbackConfig callback = 2;
+    RetryPolicy retry = 3;
+    DLQPolicy dlq = 4;
+}
+
+message AuthResponse {
+    string session_id = 1;
+    Status status = 2;
+    string error_message = 3;
+    uint64 expires_at_ms = 4;         // Expiry time (epoch ms)
+}
+
+message Task {
+    bytes payload = 1;
+    uint64 delay_ms = 2;              // Relative delay from registration
+    uint64 repeat_interval_ms = 3;    // 0 means no repetition
+}
+
+message CallbackConfig {
+    enum Protocol {
+        TCP = 0;
+        GRPC = 1;
+        HTTP = 2;
+        UDP = 3;
+    }
+    Protocol protocol = 1;
+    string endpoint = 2;
+}
+
+message RetryPolicy {
+    enum BackoffStrategy {
+        FIXED = 0;
+        EXPONENTIAL = 1;
+    }
+    uint32 max_attempts = 1;
+    BackoffStrategy strategy = 2;
+    uint64 interval_ms = 3;           // Fixed interval OR initial exponential interval
+    uint64 max_interval_ms = 4;       // Maximum interval cap for exponential backoff
+}
+
+message DLQPolicy {
+    string destination = 1;           // Target identifier/endpoint for tasks that exceed max retries
+}
+
+message RegistrationResponse {
+    string task_id = 1;               // Server-generated UUID
+    Status status = 2;
+    uint64 scheduled_time_ms = 3;     // Absolute epoch for the first execution
+    string error_message = 4;
+}
+
+message CancellationRequest {
+    string task_id = 1;
+}
+
+message CancellationResponse {
+    Status status = 1;
+    string error_message = 2;
+}
+
+message SessionRefreshRequest {}
+
+message SessionRefreshResponse {
+    Status status = 1;
+    uint64 new_expires_at_ms = 2;
+}
+
+enum Status {
+    OK = 0;
+    ERROR = 1;
+    UNAUTHORIZED = 2;
+    INVALID_REQUEST = 3;
+    SESSION_EXPIRED = 4;
+}

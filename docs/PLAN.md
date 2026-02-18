@@ -3,7 +3,7 @@
 This plan tracks the development of Boomerang, a high-performance, distributed, and persistent scheduler.
 
 ## Phase 1: Foundation & Contract Definition
-- [ ] **Define Protobuf Schema:** Create `proto/boomerang.proto` covering task registration, cancellation, and callback configurations.
+- [x] **Define Protobuf Schema:** Create `proto/boomerang.proto` covering task registration, cancellation, and callback configurations.
 - [ ] **Project Scaffolding:** Set up a "Vanilla Java" project (Maven/Gradle) with Netty, RocksDB, and etcd client dependencies.
 - [ ] **Auth Strategy:** Implement initial API Key/JWT validation logic.
 
