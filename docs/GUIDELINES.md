@@ -4,6 +4,7 @@ These guidelines are the definitive reference for development within the Boomera
 
 ## 1. Technical Stack & Standards
 - **Java:** Version 21 (LTS).
+- **Build Tool:** **Gradle** (Kotlin DSL).
 - **TypeScript:** Strict type-checking enabled for the React SPA.
 - **Code Formatting:**
     - **Java:** Enforced via **Spotless** and **Checkstyle**.
