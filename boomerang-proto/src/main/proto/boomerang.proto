@@ -22,25 +22,28 @@ message BoomerangEnvelope {
 }
 
 // Handshake establishes the session and its configuration.
+// Used for the initial authentication and to negotiate session-wide policies.
 message AuthHandshake {
-    string client_id = 1;
-    string password = 2;
-    CallbackConfig callback = 3;
-    RetryPolicy retry = 4;
-    DLQPolicy dlq = 5;
+    string client_id = 1;             // The unique identifier for the client
+    string password = 2;              // The plain-text password for authentication
+    CallbackConfig callback = 3;      // Session-wide callback configuration
+    RetryPolicy retry = 4;            // Session-wide retry policy for all tasks
+    DLQPolicy dlq = 5;                // Session-wide dead-letter queue policy
 }
 
+// Response to an AuthHandshake request.
 message AuthResponse {
-    string session_id = 1;
-    Status status = 2;
-    string error_message = 3;
-    uint64 expires_at_ms = 4;         // Expiry time (epoch ms)
+    string session_id = 1;            // The server-assigned session UUID if successful
+    Status status = 2;                // The status of the authentication attempt
+    string error_message = 3;         // Descriptive error if status is not OK
+    uint64 expires_at_ms = 4;         // Expiry time in milliseconds (Unix epoch)
 }
 
+// Represents a task to be scheduled for future execution.
 message Task {
-    bytes payload = 1;
-    uint64 delay_ms = 2;              // Relative delay from registration
-    uint64 repeat_interval_ms = 3;    // 0 means no repetition
+    bytes payload = 1;                // Opaque data to be delivered to the callback endpoint
+    uint64 delay_ms = 2;              // Relative delay from registration in milliseconds
+    uint64 repeat_interval_ms = 3;    // 0 means no repetition, otherwise the interval for repeated execution
 }
 
 message CallbackConfig {
