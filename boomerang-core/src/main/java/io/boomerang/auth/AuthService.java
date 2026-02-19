@@ -15,6 +15,7 @@ import org.slf4j.LoggerFactory;
 
 public class AuthService {
   private static final Logger log = LoggerFactory.getLogger(AuthService.class);
+  private static final SecureRandom SECURE_RANDOM = new SecureRandom();
   private final Map<String, Client> clients = new ConcurrentHashMap<>();
   private static final int ITERATIONS = 10000;
   private static final int KEY_LENGTH = 256;
@@ -52,7 +53,7 @@ public class AuthService {
 
   private String hashPassword(String password) {
     byte[] salt = new byte[16];
-    new SecureRandom().nextBytes(salt);
+    SECURE_RANDOM.nextBytes(salt);
     byte[] hash = pbkdf2(password.toCharArray(), salt);
     return Base64.getEncoder().encodeToString(salt) + ":" + Base64.getEncoder().encodeToString(hash);
   }
