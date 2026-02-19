@@ -47,4 +47,8 @@ public class ServerConfig {
   public long getSessionTimeoutMinutes() {
     return Long.parseLong(properties.getProperty("session.timeout.minutes", "60"));
   }
+
+  public long getTimerAdvanceClockIntervalMs() {
+    return Long.parseLong(properties.getProperty("timer.advance.clock.interval.ms", "200"));
+  }
 }

@@ -30,8 +30,7 @@ public class SessionManager {
     String sessionId = UUID.randomUUID().toString();
     Instant expiresAt = Instant.now().plus(sessionDuration);
     Session session =
-        new Session(
-            sessionId, clientId, callbackConfig, retryPolicy, dlqPolicy, expiresAt);
+        new Session(sessionId, clientId, callbackConfig, retryPolicy, dlqPolicy, expiresAt);
     sessions.put(sessionId, session);
     log.info("Created session {} for client {}", sessionId, clientId);
     return session;

@@ -55,7 +55,9 @@ public class AuthService {
     byte[] salt = new byte[16];
     SECURE_RANDOM.nextBytes(salt);
     byte[] hash = pbkdf2(password.toCharArray(), salt);
-    return Base64.getEncoder().encodeToString(salt) + ":" + Base64.getEncoder().encodeToString(hash);
+    return Base64.getEncoder().encodeToString(salt)
+        + ":"
+        + Base64.getEncoder().encodeToString(hash);
   }
 
   private boolean verifyPassword(String password, String storedHash) {

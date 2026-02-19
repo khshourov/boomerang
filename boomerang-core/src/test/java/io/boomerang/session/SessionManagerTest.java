@@ -20,21 +20,21 @@ class SessionManagerTest {
 
   @Test
   void shouldCreateAndRetrieveSession() {
-    CallbackConfig callbackConfig = CallbackConfig.newBuilder()
-        .setProtocol(CallbackConfig.Protocol.HTTP)
-        .setEndpoint("http://localhost:8080/callback")
-        .build();
-    RetryPolicy retryPolicy = RetryPolicy.newBuilder()
-        .setMaxAttempts(3)
-        .setStrategy(RetryPolicy.BackoffStrategy.FIXED)
-        .setIntervalMs(1000)
-        .build();
-    DLQPolicy dlqPolicy = DLQPolicy.newBuilder()
-        .setDestination("my-dlq")
-        .build();
+    CallbackConfig callbackConfig =
+        CallbackConfig.newBuilder()
+            .setProtocol(CallbackConfig.Protocol.HTTP)
+            .setEndpoint("http://localhost:8080/callback")
+            .build();
+    RetryPolicy retryPolicy =
+        RetryPolicy.newBuilder()
+            .setMaxAttempts(3)
+            .setStrategy(RetryPolicy.BackoffStrategy.FIXED)
+            .setIntervalMs(1000)
+            .build();
+    DLQPolicy dlqPolicy = DLQPolicy.newBuilder().setDestination("my-dlq").build();
 
-    Session session = sessionManager.createSession(
-        "client-1", callbackConfig, retryPolicy, dlqPolicy);
+    Session session =
+        sessionManager.createSession("client-1", callbackConfig, retryPolicy, dlqPolicy);
 
     assertThat(session).isNotNull();
     assertThat(session.sessionId()).isNotNull();
@@ -52,8 +52,8 @@ class SessionManagerTest {
     RetryPolicy retryPolicy = RetryPolicy.newBuilder().build();
     DLQPolicy dlqPolicy = DLQPolicy.newBuilder().build();
 
-    Session session = sessionManager.createSession(
-        "client-1", callbackConfig, retryPolicy, dlqPolicy);
+    Session session =
+        sessionManager.createSession("client-1", callbackConfig, retryPolicy, dlqPolicy);
     String originalSessionId = session.sessionId();
 
     Optional<Session> refreshedSession = sessionManager.refreshSession(originalSessionId);
@@ -75,8 +75,8 @@ class SessionManagerTest {
     RetryPolicy retryPolicy = RetryPolicy.newBuilder().build();
     DLQPolicy dlqPolicy = DLQPolicy.newBuilder().build();
 
-    Session session = sessionManager.createSession(
-        "client-1", callbackConfig, retryPolicy, dlqPolicy);
+    Session session =
+        sessionManager.createSession("client-1", callbackConfig, retryPolicy, dlqPolicy);
     sessionManager.invalidateSession(session.sessionId());
 
     Optional<Session> retrievedSession = sessionManager.getSession(session.sessionId());
