@@ -1,12 +1,11 @@
 package io.boomerang.timer;
 
 import java.util.Objects;
-import java.util.concurrent.atomic.AtomicReference;
 
 public class TimerTask {
   private final long expirationMs;
   private final Runnable task;
-  private final AtomicReference<TimerEntry> timerEntry = new AtomicReference<>();
+  private volatile TimerEntry timerEntry;
 
   public TimerTask(long delayMs, Runnable task) {
     this.expirationMs = System.currentTimeMillis() + delayMs;
@@ -22,22 +21,20 @@ public class TimerTask {
   }
 
   public synchronized void setTimerEntry(TimerEntry timerEntry) {
-    TimerEntry existing = this.timerEntry.get();
-    if (existing != null && existing != timerEntry) {
-      existing.remove();
+    if (this.timerEntry != null && this.timerEntry != timerEntry) {
+      this.timerEntry.remove();
     }
-    this.timerEntry.set(timerEntry);
+    this.timerEntry = timerEntry;
   }
 
   public synchronized TimerEntry getTimerEntry() {
-    return timerEntry.get();
+    return timerEntry;
   }
 
   public synchronized void cancel() {
-    TimerEntry entry = timerEntry.get();
-    if (entry != null) {
-      entry.remove();
-      timerEntry.set(null);
+    if (timerEntry != null) {
+      timerEntry.remove();
+      timerEntry = null;
     }
   }
 
@@ -47,7 +44,7 @@ public class TimerTask {
         + "expirationMs="
         + expirationMs
         + ", canceled="
-        + (timerEntry.get() == null)
+        + (timerEntry == null)
         + '}';
   }
 }

@@ -96,4 +96,29 @@ class HierarchicalTimingWheelTest {
     assertThat(latch.await(5, TimeUnit.SECONDS)).isTrue();
     assertThat(executionCount.get()).isEqualTo(numTasks);
   }
+
+  @Test
+  void shouldWorkWithCustomTimerConfig() throws InterruptedException {
+    CountDownLatch latch = new CountDownLatch(1);
+    Timer customTimer =
+        TimerFactory.createHierarchicalTimingWheel(20, 32, task -> latch.countDown());
+    try {
+      customTimer.add(new TimerTask(40, () -> {}));
+      assertThat(latch.await(2, TimeUnit.SECONDS)).isTrue();
+    } finally {
+      customTimer.shutdown();
+    }
+  }
+
+  @Test
+  void shouldSupportToString() {
+    TimerTask task = new TimerTask(100, () -> {});
+    TimerEntry entry = new TimerEntry(task);
+
+    assertThat(task.toString()).contains("expirationMs").contains("canceled=false");
+    assertThat(entry.toString()).contains("timerTask=" + task);
+
+    task.cancel();
+    assertThat(task.toString()).contains("canceled=true");
+  }
 }

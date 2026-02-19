@@ -1,10 +1,8 @@
 package io.boomerang.timer;
 
-import java.util.concurrent.atomic.AtomicReference;
-
 public class TimerEntry {
   private final TimerTask timerTask;
-  private final AtomicReference<TimerBucket> timerBucket = new AtomicReference<>();
+  private volatile TimerBucket timerBucket;
 
   public TimerEntry next;
   public TimerEntry prev;
@@ -16,12 +14,12 @@ public class TimerEntry {
     }
   }
 
-  public void setTimerBucket(TimerBucket timerBucket) {
-    this.timerBucket.set(timerBucket);
+  public synchronized void setTimerBucket(TimerBucket timerBucket) {
+    this.timerBucket = timerBucket;
   }
 
-  public TimerBucket getTimerBucket() {
-    return timerBucket.get();
+  public synchronized TimerBucket getTimerBucket() {
+    return timerBucket;
   }
 
   public TimerTask getTimerTask() {
@@ -29,10 +27,9 @@ public class TimerEntry {
   }
 
   public synchronized void remove() {
-    TimerBucket bucket = timerBucket.get();
-    if (bucket != null) {
-      bucket.remove(this);
-      timerBucket.set(null);
+    if (timerBucket != null) {
+      timerBucket.remove(this);
+      timerBucket = null;
     }
   }
 

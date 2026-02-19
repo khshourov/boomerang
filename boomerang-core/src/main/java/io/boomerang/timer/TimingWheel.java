@@ -9,7 +9,7 @@ public class TimingWheel {
   private final long interval;
   private final TimerBucket[] buckets;
   private final DelayQueue<TimerBucket> delayQueue;
-  private long currentTime;
+  private volatile long currentTime;
 
   private final AtomicReference<TimingWheel> overflowWheel = new AtomicReference<>();
 
