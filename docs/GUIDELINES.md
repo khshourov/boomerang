@@ -13,7 +13,10 @@ These guidelines are the definitive reference for development within the Boomera
     - **Architecture:** Major technical decisions must be documented in `docs/ADRs/`.
     - **API:** Standard JavaDoc for internal and Protobuf-generated code.
 
-## 2. Quality Assurance & Testing
+## 2. Coding Standards
+- **Guard Clauses:** Prefer early returns (guard clauses) over nested `if` statements to reduce cognitive load and improve readability.
+
+## 3. Quality Assurance & Testing
 - **Code Coverage:** Minimum **90% coverage** required for all new features.
 - **Mutation Testing:** Use **PITest** (or similar) to ensure test quality beyond simple coverage metrics.
 - **Performance:** While strict SLAs are not enforced initially, performance is a core value and should guide architectural choices.

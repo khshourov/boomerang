@@ -50,8 +50,11 @@ A high-performance, distributed, and persistent scheduler that accepts binary pa
     - **Connection:** Direct Protobuf/TCP communication with server nodes.
 
 ## Key Workflows
-1. **Register Task:** Client sends `[Payload, Interval, RepeatFlag, CallbackConfig, AuthToken]`.
-   - `CallbackConfig` includes: `Protocol`, `Endpoint`, `RetryPolicy`, and `DLQPolicy`.
-2. **Scheduled Execution:** Service triggers the `CallbackEngine`. If failure occurs, initiate the `RetryLoop`.
-3. **Cancel Task:** Client stops a recurring interval using `TaskID`.
-4. **Audit & Monitor:** Admins use the Web Panel to track system performance and manage failed tasks.
+1. **Auth Handshake:** Client sends `[client_id, password, CallbackConfig, RetryPolicy, DLQPolicy]`.
+   - Server validates credentials and returns `session_id` and `expires_at_ms`.
+2. **Register Task:** Client sends `[Payload, Interval, RepeatFlag]` along with `session_id` in the envelope.
+   - `CallbackConfig` and other policies are inherited from the session.
+3. **Scheduled Execution:** Service triggers the `CallbackEngine`. If failure occurs, initiate the `RetryLoop`.
+4. **Cancel Task:** Client stops a recurring interval using `TaskID`.
+5. **Session Refresh:** Client refreshes `session_id` before it expires.
+6. **Audit & Monitor:** Admins use the Web Panel to track system performance and manage failed tasks.

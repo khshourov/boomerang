@@ -5,7 +5,7 @@ This plan tracks the development of Boomerang, a high-performance, distributed, 
 ## Phase 1: Foundation & Contract Definition
 - [x] **Define Protobuf Schema:** Create `proto/boomerang.proto` covering task registration, cancellation, and callback configurations.
 - [x] **Project Scaffolding:** Set up a "Vanilla Java" project (Maven/Gradle) with Netty, RocksDB, and etcd client dependencies.
-- [ ] **Auth Strategy:** Implement initial API Key/JWT validation logic.
+- [x] **Auth Strategy:** Implement initial client-id/password mechanism and session management.
 
 ## Phase 2: Core Scheduling Engine
 - [ ] **Hierarchical Timing Wheel (HTW):** Implement the in-memory O(1) scheduling logic.
@@ -14,6 +14,7 @@ This plan tracks the development of Boomerang, a high-performance, distributed, 
 
 ## Phase 3: Persistence & Reliability
 - [ ] **RocksDB Integration:** Implement the time-sorted index for long-term tasks.
+- [ ] **Client Credential Storage:** Implement encrypted persistent storage for admin and client credentials.
 - [ ] **Write-Ahead Log (WAL):** Ensure every task registration is durable before ACK.
 - [ ] **Recovery Logic:** Implement system startup logic to reload tasks from RocksDB into the HTW.
 - [ ] **Retry Engine & DLQ:** Implement the retry loop logic and persistent Dead Letter Queue.
