@@ -2,7 +2,6 @@ plugins {
     id("com.diffplug.spotless") version "6.25.0"
     id("java")
     id("jacoco")
-    id("info.solidsoft.pitest") version "1.15.0" apply false
 }
 
 allprojects {
@@ -34,17 +33,6 @@ subprojects {
 
     jacoco {
         toolVersion = "0.8.11"
-    }
-
-    apply(plugin = "info.solidsoft.pitest")
-
-    configure<info.solidsoft.pitest.gradle.PitestTaskConfiguration> {
-        targetClasses.set(listOf("io.boomerang.*"))
-        pitestVersion.set("1.15.0")
-        threads.set(4)
-        outputFormats.set(listOf("XML", "HTML"))
-        timestampedReports.set(false)
-        junit5PluginVersion.set("1.2.1")
     }
 
     tasks.jacocoTestReport {

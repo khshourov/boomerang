@@ -43,3 +43,4 @@ This plan tracks the development of Boomerang, a high-performance, distributed, 
 - [ ] **Load Testing:** Verify 1 million concurrent tasks and jitter (1-10ms).
 - [ ] **Fault Tolerance Testing:** Simulate node failures and verify etcd/RocksDB recovery.
 - [ ] **Metrics & Telemetry:** Finalize Prometheus/Grafana integration.
+- [ ] **Mutation Testing:** Configure PITest for Gradle 9/Kotlin DSL compatibility to ensure high test quality.
