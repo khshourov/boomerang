@@ -64,7 +64,7 @@ class RocksDBTieredTimerIntegrationTest {
   void shouldRecoverTasksFromRocksDBOnStartup() throws InterruptedException {
     // 1. Create a task that is just outside the window
     recoveryLatch = new CountDownLatch(1);
-    TimerTask task = new TimerTask("task-to-recover", 1500, null, 0, () -> {});
+    TimerTask task = new TimerTask("task-to-recover", "client1", 1500, null, 0, () -> {});
     rocksDbStore.save(task);
 
     // 2. Restart the timer (simulated by creating a new one with same store)

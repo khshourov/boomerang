@@ -177,9 +177,9 @@ class HierarchicalTimingWheelTest {
   @Test
   void shouldSupportEqualsAndHashCode() {
     String taskId = "test-id";
-    TimerTask task1 = new TimerTask(taskId, 100, null, 0, () -> {});
-    TimerTask task2 = new TimerTask(taskId, 200, null, 0, () -> {});
-    TimerTask task3 = new TimerTask("different-id", 100, null, 0, () -> {});
+    TimerTask task1 = new TimerTask(taskId, "client1", 100, null, 0, () -> {});
+    TimerTask task2 = new TimerTask(taskId, "client1", 200, null, 0, () -> {});
+    TimerTask task3 = new TimerTask("different-id", "client1", 100, null, 0, () -> {});
 
     assertThat(task1)
         .isEqualTo(task2)
@@ -209,7 +209,7 @@ class HierarchicalTimingWheelTest {
   @Test
   void shouldClonePayload() {
     byte[] original = new byte[] {1, 2, 3};
-    TimerTask task = new TimerTask(null, 100, original, 0, () -> {});
+    TimerTask task = new TimerTask("task1", "client1", 100, original, 0, () -> {});
 
     byte[] retrieved = task.getPayload();
     assertThat(retrieved).isEqualTo(original).isNotSameAs(original);
@@ -227,7 +227,7 @@ class HierarchicalTimingWheelTest {
 
   @Test
   void shouldHandleNullPayload() {
-    TimerTask task = new TimerTask(null, 100, null, 0, () -> {});
+    TimerTask task = new TimerTask("task1", "client1", 100, null, 0, () -> {});
     assertThat(task.getPayload()).isNull();
   }
 }

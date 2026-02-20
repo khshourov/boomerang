@@ -13,9 +13,11 @@ import java.util.UUID;
  */
 public class TimerTask {
   private final String taskId;
+  private final String clientId;
   private final long expirationMs;
   private final byte[] payload;
   private final long repeatIntervalMs;
+  private final int attemptCount;
   private final Runnable task;
   private volatile TimerEntry timerEntry;
 
@@ -29,13 +31,22 @@ public class TimerTask {
    * @param task the action to perform when the task expires; must be non-null
    */
   public TimerTask(long delayMs, Runnable task) {
-    this(UUID.randomUUID().toString(), delayMs, null, 0, task);
+    this(
+        UUID.randomUUID().toString(),
+        "system",
+        System.currentTimeMillis() + delayMs,
+        null,
+        0,
+        0,
+        task,
+        true);
   }
 
   /**
    * Creates a new timer task with full specification.
    *
    * @param taskId the unique identifier for this task; if {@code null}, a UUID will be generated
+   * @param clientId the identifier of the client that owns this task; must be non-null
    * @param delayMs the delay in milliseconds from now when the task should expire
    * @param payload the opaque binary payload to be delivered; can be {@code null}
    * @param repeatIntervalMs the interval in milliseconds for repeated execution; 0 for no
@@ -43,31 +54,50 @@ public class TimerTask {
    * @param task the action to perform when the task expires; must be non-null
    */
   public TimerTask(
-      String taskId, long delayMs, byte[] payload, long repeatIntervalMs, Runnable task) {
-    this(taskId, System.currentTimeMillis() + delayMs, payload, repeatIntervalMs, task, true);
+      String taskId,
+      String clientId,
+      long delayMs,
+      byte[] payload,
+      long repeatIntervalMs,
+      Runnable task) {
+    this(
+        taskId,
+        clientId,
+        System.currentTimeMillis() + delayMs,
+        payload,
+        repeatIntervalMs,
+        0,
+        task,
+        true);
   }
 
   /**
-   * Internal constructor that allows setting an absolute expiration time.
+   * Internal constructor that allows setting an absolute expiration time and attempt count.
    *
    * @param taskId the unique identifier for this task
+   * @param clientId the identifier of the client that owns this task
    * @param expirationMs the absolute expiration timestamp in milliseconds
    * @param payload the opaque binary payload
    * @param repeatIntervalMs the interval for repeated execution
+   * @param attemptCount the number of retry attempts already made
    * @param task the action to perform
    * @param ignored dummy parameter to distinguish from the public constructor
    */
   private TimerTask(
       String taskId,
+      String clientId,
       long expirationMs,
       byte[] payload,
       long repeatIntervalMs,
+      int attemptCount,
       Runnable task,
       boolean ignored) {
     this.taskId = taskId != null ? taskId : UUID.randomUUID().toString();
+    this.clientId = Objects.requireNonNull(clientId, "clientId must not be null");
     this.expirationMs = expirationMs;
     this.payload = payload != null ? payload.clone() : null;
     this.repeatIntervalMs = repeatIntervalMs;
+    this.attemptCount = attemptCount;
     this.task = Objects.requireNonNull(task, "Task must not be null");
   }
 
@@ -75,16 +105,61 @@ public class TimerTask {
    * Creates a new timer task with an absolute expiration timestamp.
    *
    * @param taskId the unique identifier for this task; if {@code null}, a UUID will be generated
+   * @param clientId the identifier of the client that owns this task
    * @param expirationMs the absolute expiration timestamp in milliseconds
    * @param payload the opaque binary payload to be delivered; can be {@code null}
    * @param repeatIntervalMs the interval in milliseconds for repeated execution; 0 for no
    *     repetition
+   * @param attemptCount the number of retry attempts already made
    * @param task the action to perform when the task expires; must be non-null
    * @return a new {@link TimerTask} instance
    */
   public static TimerTask withExpiration(
-      String taskId, long expirationMs, byte[] payload, long repeatIntervalMs, Runnable task) {
-    return new TimerTask(taskId, expirationMs, payload, repeatIntervalMs, task, true);
+      String taskId,
+      String clientId,
+      long expirationMs,
+      byte[] payload,
+      long repeatIntervalMs,
+      int attemptCount,
+      Runnable task) {
+    return new TimerTask(
+        taskId, clientId, expirationMs, payload, repeatIntervalMs, attemptCount, task, true);
+  }
+
+  /**
+   * Creates a new task that represents the next retry attempt of this task.
+   *
+   * @param nextDelayMs the delay in milliseconds until the next attempt
+   * @return a new {@link TimerTask} instance for the next attempt
+   */
+  public TimerTask nextAttempt(long nextDelayMs) {
+    return new TimerTask(
+        this.taskId,
+        this.clientId,
+        System.currentTimeMillis() + nextDelayMs,
+        this.payload,
+        this.repeatIntervalMs,
+        this.attemptCount + 1,
+        this.task,
+        true);
+  }
+
+  /**
+   * Creates a new task with a specific absolute expiration time, inheriting other fields.
+   *
+   * @param expirationMs the new absolute expiration time
+   * @return a new {@link TimerTask} instance
+   */
+  public TimerTask withExpiration(long expirationMs) {
+    return new TimerTask(
+        this.taskId,
+        this.clientId,
+        expirationMs,
+        this.payload,
+        this.repeatIntervalMs,
+        this.attemptCount,
+        this.task,
+        true);
   }
 
   /**
@@ -94,6 +169,15 @@ public class TimerTask {
    */
   public String getTaskId() {
     return taskId;
+  }
+
+  /**
+   * Gets the client identifier associated with this task.
+   *
+   * @return the client ID; defaults to "system" for internal tasks
+   */
+  public String getClientId() {
+    return clientId;
   }
 
   /**
@@ -121,6 +205,15 @@ public class TimerTask {
    */
   public long getRepeatIntervalMs() {
     return repeatIntervalMs;
+  }
+
+  /**
+   * Gets the number of retry attempts already made for this task.
+   *
+   * @return the attempt count
+   */
+  public int getAttemptCount() {
+    return attemptCount;
   }
 
   /**
@@ -167,10 +260,15 @@ public class TimerTask {
         + "taskId='"
         + taskId
         + '\''
+        + ", clientId='"
+        + clientId
+        + '\''
         + ", expirationMs="
         + expirationMs
         + ", repeatIntervalMs="
         + repeatIntervalMs
+        + ", attemptCount="
+        + attemptCount
         + ", payloadSize="
         + (payload != null ? payload.length : 0)
         + ", canceled="

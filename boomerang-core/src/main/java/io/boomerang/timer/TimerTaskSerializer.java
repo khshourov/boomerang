@@ -28,8 +28,10 @@ public class TimerTaskSerializer {
     try (ByteArrayOutputStream baos = new ByteArrayOutputStream();
         DataOutputStream dos = new DataOutputStream(baos)) {
       dos.writeUTF(task.getTaskId());
+      dos.writeUTF(task.getClientId());
       dos.writeLong(task.getExpirationMs());
       dos.writeLong(task.getRepeatIntervalMs());
+      dos.writeInt(task.getAttemptCount());
 
       byte[] payload = task.getPayload();
       if (payload == null) {
@@ -53,8 +55,11 @@ public class TimerTaskSerializer {
     try (ByteArrayInputStream bais = new ByteArrayInputStream(data);
         DataInputStream dis = new DataInputStream(bais)) {
       String taskId = dis.readUTF();
+      String clientId = dis.readUTF();
+
       long expirationMs = dis.readLong();
       long repeatIntervalMs = dis.readLong();
+      int attemptCount = dis.readInt();
 
       int payloadLength = dis.readInt();
       byte[] payload = null;
@@ -65,7 +70,8 @@ public class TimerTaskSerializer {
 
       // IMPORTANT: Using a placeholder Runnable as the task itself is not serializable.
       // The dispatcher in TieredTimer handles actual execution.
-      return TimerTask.withExpiration(taskId, expirationMs, payload, repeatIntervalMs, () -> {});
+      return TimerTask.withExpiration(
+          taskId, clientId, expirationMs, payload, repeatIntervalMs, attemptCount, () -> {});
     }
   }
 }

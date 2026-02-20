@@ -26,6 +26,7 @@ class BoomerangBootstrapTest {
     System.setProperty("BOOMERANG_MASTER_KEY", MASTER_KEY);
     System.setProperty("rocksdb.client.path", tempDir.resolve("clients").toString());
     System.setProperty("rocksdb.path", tempDir.resolve("rocksdb").toString());
+    System.setProperty("rocksdb.dlq.path", tempDir.resolve("dlq").toString());
     System.setProperty("timer.imminent.window.ms", "1000"); // Fast window for test
     System.setProperty("timer.advance.clock.interval.ms", "50");
 
@@ -42,6 +43,7 @@ class BoomerangBootstrapTest {
     System.clearProperty("BOOMERANG_MASTER_KEY");
     System.clearProperty("rocksdb.client.path");
     System.clearProperty("rocksdb.path");
+    System.clearProperty("rocksdb.dlq.path");
     System.clearProperty("timer.imminent.window.ms");
     System.clearProperty("timer.advance.clock.interval.ms");
   }
@@ -67,7 +69,7 @@ class BoomerangBootstrapTest {
   void shouldRecoverTasksOnRestart() throws Exception {
     String taskId = "recover-me";
     // 1. Create a task that expires soon
-    TimerTask task = new TimerTask(taskId, 500, null, 0, () -> {});
+    TimerTask task = new TimerTask(taskId, "admin", 500, null, 0, () -> {});
     bootstrap.getTimer().add(task);
 
     // 2. Shut down the bootstrap

@@ -61,10 +61,12 @@ public class TieredTimer implements Timer {
       return;
     }
 
-    // Once a task is successfully dispatched, it can be safely removed from long-term storage.
-    // In a persistent implementation, this ensures we don't re-run it on restart.
-    longTermStore.delete(task);
+    // dispatcher.accept(task) will handle execution and its own errors/retries.
     dispatcher.accept(task);
+
+    // Once a task is successfully dispatched (or handed over to the retry logic by the dispatcher),
+    // it can be safely removed from long-term storage for THIS trigger.
+    longTermStore.delete(task);
 
     // Automatic rescheduling for repeatable tasks
     if (task.getRepeatIntervalMs() > 0) {
@@ -72,6 +74,7 @@ public class TieredTimer implements Timer {
       TimerTask nextTask =
           new TimerTask(
               task.getTaskId(),
+              task.getClientId(),
               task.getRepeatIntervalMs(),
               task.getPayload(),
               task.getRepeatIntervalMs(),

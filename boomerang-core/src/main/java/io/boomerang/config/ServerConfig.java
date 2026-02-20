@@ -150,6 +150,15 @@ public class ServerConfig {
   }
 
   /**
+   * Gets the filesystem path for the RocksDB dead-letter queue (DLQ) directory.
+   *
+   * @return the RocksDB DLQ path
+   */
+  public String getRocksDbDlqPath() {
+    return getProperty("rocksdb.dlq.path", "data/dlq");
+  }
+
+  /**
    * Gets the master key for AES encryption.
    *
    * <p>This key is retrieved from the {@code BOOMERANG_MASTER_KEY} environment variable or system

@@ -5,10 +5,15 @@ import io.boomerang.auth.ClientStore;
 import io.boomerang.auth.RocksDBClientStore;
 import io.boomerang.config.ServerConfig;
 import io.boomerang.session.SessionManager;
+import io.boomerang.timer.DLQStore;
+import io.boomerang.timer.DefaultRetryEngine;
 import io.boomerang.timer.LongTermTaskStore;
+import io.boomerang.timer.RetryEngine;
+import io.boomerang.timer.RocksDBDLQStore;
 import io.boomerang.timer.RocksDBLongTermTaskStore;
 import io.boomerang.timer.TieredTimer;
 import io.boomerang.timer.Timer;
+import io.boomerang.timer.TimerTask;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -27,6 +32,8 @@ public class BoomerangBootstrap {
   private final ServerConfig serverConfig;
   private final ClientStore clientStore;
   private final LongTermTaskStore taskStore;
+  private final DLQStore dlqStore;
+  private final RetryEngine retryEngine;
   private final Timer timer;
 
   /**
@@ -42,17 +49,33 @@ public class BoomerangBootstrap {
 
     // Initialize task storage and scheduling engine
     this.taskStore = new RocksDBLongTermTaskStore(serverConfig);
+    this.dlqStore = new RocksDBDLQStore(serverConfig);
+
+    // The retry engine needs to reschedule tasks using the timer
+    this.retryEngine = new DefaultRetryEngine(clientStore, taskStore, dlqStore, this::resubmitTask);
+
     this.timer =
         new TieredTimer(
             task -> {
-              log.info(
-                  "DISPATCH: Task {} fired. Payload size: {}",
-                  task.getTaskId(),
-                  task.getPayload() != null ? task.getPayload().length : 0);
-              // TODO: Wire into CallbackEngine in Phase 4
+              try {
+                log.info(
+                    "DISPATCH: Task {} fired. Payload size: {}",
+                    task.getTaskId(),
+                    task.getPayload() != null ? task.getPayload().length : 0);
+                // TODO: Wire into CallbackEngine in Phase 4
+              } catch (Exception e) {
+                log.error("Failed to dispatch task {}: {}", task.getTaskId(), e.getMessage());
+                retryEngine.handleFailure(task, e);
+              }
             },
             taskStore,
             serverConfig);
+  }
+
+  private void resubmitTask(TimerTask task) {
+    if (timer != null) {
+      timer.add(task);
+    }
   }
 
   /** Starts the Boomerang core services. */
@@ -71,6 +94,9 @@ public class BoomerangBootstrap {
       timer.shutdown();
     }
     if (taskStore instanceof AutoCloseable ac) {
+      ac.close();
+    }
+    if (dlqStore instanceof AutoCloseable ac) {
       ac.close();
     }
     if (clientStore != null) {

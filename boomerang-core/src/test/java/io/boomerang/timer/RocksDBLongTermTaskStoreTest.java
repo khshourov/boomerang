@@ -36,22 +36,24 @@ class RocksDBLongTermTaskStoreTest {
 
   @Test
   void testSaveAndFindById() {
-    TimerTask task = new TimerTask("task1", 10000, "payload".getBytes(), 0, () -> {});
+    TimerTask task = new TimerTask("task1", "client1", 10000, "payload".getBytes(), 0, () -> {});
     store.save(task);
 
     Optional<TimerTask> found = store.findById("task1");
     assertThat(found).isPresent();
     assertThat(found.get().getTaskId()).isEqualTo("task1");
+    assertThat(found.get().getClientId()).isEqualTo("client1");
     assertThat(found.get().getExpirationMs()).isEqualTo(task.getExpirationMs());
     assertThat(found.get().getPayload()).isEqualTo("payload".getBytes());
   }
 
   @Test
   void testUpdateTask() {
-    TimerTask task1 = new TimerTask("task1", 10000, "payload1".getBytes(), 0, () -> {});
+    TimerTask task1 = new TimerTask("task1", "client1", 10000, "payload1".getBytes(), 0, () -> {});
     store.save(task1);
 
-    TimerTask task1Updated = new TimerTask("task1", 20000, "payload2".getBytes(), 0, () -> {});
+    TimerTask task1Updated =
+        new TimerTask("task1", "client1", 20000, "payload2".getBytes(), 0, () -> {});
     store.save(task1Updated);
 
     Optional<TimerTask> found = store.findById("task1");
@@ -71,9 +73,9 @@ class RocksDBLongTermTaskStoreTest {
   @Test
   void testFetchTasksDueBefore() {
     long now = System.currentTimeMillis();
-    TimerTask task1 = new TimerTask("task1", 1000, null, 0, () -> {}); // due in 1s
-    TimerTask task2 = new TimerTask("task2", 5000, null, 0, () -> {}); // due in 5s
-    TimerTask task3 = new TimerTask("task3", 10000, null, 0, () -> {}); // due in 10s
+    TimerTask task1 = new TimerTask("task1", "client1", 1000, null, 0, () -> {}); // due in 1s
+    TimerTask task2 = new TimerTask("task2", "client1", 5000, null, 0, () -> {}); // due in 5s
+    TimerTask task3 = new TimerTask("task3", "client1", 10000, null, 0, () -> {}); // due in 10s
 
     store.save(task1);
     store.save(task2);
@@ -97,7 +99,7 @@ class RocksDBLongTermTaskStoreTest {
 
   @Test
   void testDelete() {
-    TimerTask task = new TimerTask("task1", 10000, null, 0, () -> {});
+    TimerTask task = new TimerTask("task1", "client1", 10000, null, 0, () -> {});
     store.save(task);
     assertThat(store.findById("task1")).isPresent();
 
@@ -113,7 +115,7 @@ class RocksDBLongTermTaskStoreTest {
 
   @Test
   void testIsAfterBoundaryCases() {
-    TimerTask task = new TimerTask("task1", 5000, null, 0, () -> {}); // exp = now + 5000
+    TimerTask task = new TimerTask("task1", "client1", 5000, null, 0, () -> {}); // exp = now + 5000
     store.save(task);
 
     // Exactly at expiration: should NOT be after
@@ -131,10 +133,11 @@ class RocksDBLongTermTaskStoreTest {
 
   @Test
   void testSerializationWithEmptyPayload() throws IOException {
-    TimerTask task = new TimerTask("task1", 10000, new byte[0], 0, () -> {});
+    TimerTask task = new TimerTask("task1", "client1", 10000, new byte[0], 0, () -> {});
     byte[] data = TimerTaskSerializer.serialize(task);
     TimerTask deserialized = TimerTaskSerializer.deserialize(data);
 
+    assertThat(deserialized.getClientId()).isEqualTo("client1");
     assertThat(deserialized.getPayload()).isEmpty();
   }
 
@@ -142,8 +145,8 @@ class RocksDBLongTermTaskStoreTest {
   void testCreateTimeKeyIntegrity() {
     // Create two tasks with SAME expiration but DIFFERENT IDs
     long expiration = System.currentTimeMillis() + 10000;
-    TimerTask task1 = TimerTask.withExpiration("a", expiration, null, 0, () -> {});
-    TimerTask task2 = TimerTask.withExpiration("b", expiration, null, 0, () -> {});
+    TimerTask task1 = TimerTask.withExpiration("a", "client1", expiration, null, 0, 0, () -> {});
+    TimerTask task2 = TimerTask.withExpiration("b", "client1", expiration, null, 0, 0, () -> {});
 
     store.save(task1);
     store.save(task2);

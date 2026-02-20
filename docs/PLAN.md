@@ -17,7 +17,7 @@ This plan tracks the development of Boomerang, a high-performance, distributed, 
 - [x] **Client Credential Storage:** Implement encrypted persistent storage for admin and client credentials.
 - [x] **Persistent Client Policies:** Store callback and retry configurations at the client level during registration.
 - [x] **Recovery Logic:** Implement system startup logic to reload tasks from RocksDB into the HTW.
-- [ ] **Retry Engine & DLQ:** Implement the retry loop logic and persistent Dead Letter Queue.
+- [x] **Retry Engine & DLQ:** Implement the retry loop logic and persistent Dead Letter Queue.
 
 ## Phase 4: Networking & Callback Engine
 - [ ] **Inbound TCP Server:** Implement the Netty-based Protobuf/TCP server for task registration.

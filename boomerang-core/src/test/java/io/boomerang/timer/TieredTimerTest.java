@@ -126,6 +126,7 @@ class TieredTimerTest {
     TimerTask task =
         new TimerTask(
             "repeat-task",
+            "client1",
             100, // Initial delay
             null,
             100, // Repeat interval
