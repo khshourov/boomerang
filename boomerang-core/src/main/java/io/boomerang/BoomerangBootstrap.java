@@ -31,8 +31,8 @@ public class BoomerangBootstrap {
   public BoomerangBootstrap(ServerConfig serverConfig) {
     this.serverConfig = serverConfig;
     this.clientStore = new RocksDBClientStore(serverConfig);
-    this.authService = new AuthService(clientStore, serverConfig);
     this.sessionManager = new SessionManager(serverConfig);
+    this.authService = new AuthService(clientStore, serverConfig, sessionManager);
   }
 
   /** Starts the Boomerang core services. */

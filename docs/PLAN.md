@@ -15,7 +15,7 @@ This plan tracks the development of Boomerang, a high-performance, distributed, 
 ## Phase 3: Persistence & Reliability
 - [x] **RocksDB Integration:** Implement the time-sorted index for long-term tasks.
 - [x] **Client Credential Storage:** Implement encrypted persistent storage for admin and client credentials.
-- [ ] **Write-Ahead Log (WAL):** Ensure every task registration is durable before ACK.
+- [x] **Persistent Client Policies:** Store callback and retry configurations at the client level during registration.
 - [ ] **Recovery Logic:** Implement system startup logic to reload tasks from RocksDB into the HTW.
 - [ ] **Retry Engine & DLQ:** Implement the retry loop logic and persistent Dead Letter Queue.
 

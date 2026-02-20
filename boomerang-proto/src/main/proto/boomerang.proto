@@ -18,6 +18,10 @@ message BoomerangEnvelope {
         CancellationResponse cancellation_response = 7;
         SessionRefreshRequest session_refresh = 8;
         SessionRefreshResponse session_refresh_response = 9;
+        ClientRegistrationRequest client_registration = 10;
+        ClientRegistrationResponse client_registration_response = 11;
+        ClientDeregistrationRequest client_deregistration = 12;
+        ClientDeregistrationResponse client_deregistration_response = 13;
     }
 }
 
@@ -26,9 +30,34 @@ message BoomerangEnvelope {
 message AuthHandshake {
     string client_id = 1;             // The unique identifier for the client
     string password = 2;              // The plain-text password for authentication
-    CallbackConfig callback = 3;      // Session-wide callback configuration
-    RetryPolicy retry = 4;            // Session-wide retry policy for all tasks
-    DLQPolicy dlq = 5;                // Session-wide dead-letter queue policy
+    CallbackConfig callback = 3;      // Optional: Session-level override for callback configuration
+    RetryPolicy retry = 4;            // Optional: Session-level override for retry policy
+    DLQPolicy dlq = 5;                // Optional: Session-level override for dead-letter queue policy
+}
+
+// Client registration adds a new client with their default policies.
+// Usually performed by an admin.
+message ClientRegistrationRequest {
+    string client_id = 1;
+    string password = 2;
+    bool is_admin = 3;
+    CallbackConfig callback = 4;
+    RetryPolicy retry = 5;
+    DLQPolicy dlq = 6;
+}
+
+message ClientRegistrationResponse {
+    Status status = 1;
+    string error_message = 2;
+}
+
+message ClientDeregistrationRequest {
+    string client_id = 1;
+}
+
+message ClientDeregistrationResponse {
+    Status status = 1;
+    string error_message = 2;
 }
 
 // Response to an AuthHandshake request.

@@ -4,9 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import io.boomerang.config.ServerConfig;
 import io.boomerang.model.Session;
-import io.boomerang.proto.CallbackConfig;
-import io.boomerang.proto.DLQPolicy;
-import io.boomerang.proto.RetryPolicy;
 import java.nio.file.Path;
 import java.util.Base64;
 import java.util.Optional;
@@ -47,18 +44,9 @@ class BoomerangBootstrapTest {
     String adminId = "admin";
     String adminPassword = "admin123";
 
-    boolean authenticated = bootstrap.getAuthService().authenticate(adminId, adminPassword);
-    assertThat(authenticated).isTrue();
-
-    // Handshake flow
-    CallbackConfig callbackConfig = CallbackConfig.newBuilder().build();
-    RetryPolicy retryPolicy = RetryPolicy.newBuilder().build();
-    DLQPolicy dlqPolicy = DLQPolicy.newBuilder().build();
-
-    Session session =
-        bootstrap
-            .getSessionManager()
-            .createSession(adminId, callbackConfig, retryPolicy, dlqPolicy);
+    Optional<Session> sessionOpt = bootstrap.getAuthService().authenticate(adminId, adminPassword);
+    assertThat(sessionOpt).isPresent();
+    Session session = sessionOpt.get();
 
     assertThat(session).isNotNull();
     assertThat(session.clientId()).isEqualTo(adminId);

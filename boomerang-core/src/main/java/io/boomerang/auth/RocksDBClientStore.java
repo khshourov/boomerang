@@ -2,6 +2,9 @@ package io.boomerang.auth;
 
 import io.boomerang.config.ServerConfig;
 import io.boomerang.model.Client;
+import io.boomerang.proto.CallbackConfig;
+import io.boomerang.proto.DLQPolicy;
+import io.boomerang.proto.RetryPolicy;
 import io.boomerang.timer.StorageException;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -25,7 +28,7 @@ import org.slf4j.LoggerFactory;
 /**
  * A RocksDB-backed implementation of {@link ClientStore} with at-rest encryption.
  *
- * <p>Each client record is serialized and then encrypted before being stored in RocksDB.
+ * <p>Each client record is serialized manually and then encrypted before being stored in RocksDB.
  *
  * @since 1.0.0
  */
@@ -129,6 +132,38 @@ public class RocksDBClientStore implements ClientStore, AutoCloseable {
       dos.writeUTF(client.clientId());
       dos.writeUTF(client.hashedPassword());
       dos.writeBoolean(client.isAdmin());
+
+      // Serialize CallbackConfig
+      CallbackConfig callback = client.callbackConfig();
+      if (callback == null) {
+        dos.writeBoolean(false);
+      } else {
+        dos.writeBoolean(true);
+        dos.writeInt(callback.getProtocolValue());
+        dos.writeUTF(callback.getEndpoint());
+      }
+
+      // Serialize RetryPolicy
+      RetryPolicy retry = client.retryPolicy();
+      if (retry == null) {
+        dos.writeBoolean(false);
+      } else {
+        dos.writeBoolean(true);
+        dos.writeInt(retry.getMaxAttempts());
+        dos.writeInt(retry.getStrategyValue());
+        dos.writeLong(retry.getIntervalMs());
+        dos.writeLong(retry.getMaxIntervalMs());
+      }
+
+      // Serialize DLQPolicy
+      DLQPolicy dlq = client.dlqPolicy();
+      if (dlq == null) {
+        dos.writeBoolean(false);
+      } else {
+        dos.writeBoolean(true);
+        dos.writeUTF(dlq.getDestination());
+      }
+
       return baos.toByteArray();
     }
   }
@@ -139,7 +174,36 @@ public class RocksDBClientStore implements ClientStore, AutoCloseable {
       String clientId = dis.readUTF();
       String hashedPassword = dis.readUTF();
       boolean isAdmin = dis.readBoolean();
-      return new Client(clientId, hashedPassword, isAdmin);
+
+      // Deserialize CallbackConfig
+      CallbackConfig callback = null;
+      if (dis.readBoolean()) {
+        callback =
+            CallbackConfig.newBuilder()
+                .setProtocolValue(dis.readInt())
+                .setEndpoint(dis.readUTF())
+                .build();
+      }
+
+      // Deserialize RetryPolicy
+      RetryPolicy retry = null;
+      if (dis.readBoolean()) {
+        retry =
+            RetryPolicy.newBuilder()
+                .setMaxAttempts(dis.readInt())
+                .setStrategyValue(dis.readInt())
+                .setIntervalMs(dis.readLong())
+                .setMaxIntervalMs(dis.readLong())
+                .build();
+      }
+
+      // Deserialize DLQPolicy
+      DLQPolicy dlq = null;
+      if (dis.readBoolean()) {
+        dlq = DLQPolicy.newBuilder().setDestination(dis.readUTF()).build();
+      }
+
+      return new Client(clientId, hashedPassword, isAdmin, callback, retry, dlq);
     }
   }
 }

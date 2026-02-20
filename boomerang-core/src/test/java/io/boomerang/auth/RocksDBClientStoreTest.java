@@ -5,6 +5,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import io.boomerang.config.ServerConfig;
 import io.boomerang.model.Client;
+import io.boomerang.proto.CallbackConfig;
+import io.boomerang.proto.DLQPolicy;
+import io.boomerang.proto.RetryPolicy;
 import io.boomerang.timer.StorageException;
 import java.nio.file.Path;
 import java.util.Base64;
@@ -32,15 +35,32 @@ class RocksDBClientStoreTest {
       store.close();
     }
     System.clearProperty("BOOMERANG_MASTER_KEY");
+    System.clearProperty("rocksdb.client.path");
   }
 
   @Test
   void shouldSaveAndFindClient() {
-    Client client = new Client("client-1", "hashed-pass", true);
+    Client client = new Client("client-1", "hashed-pass", true, null, null, null);
     store.save(client);
 
     Optional<Client> found = store.findById("client-1");
     assertThat(found).isPresent().contains(client);
+  }
+
+  @Test
+  void shouldPersistPolicies() {
+    CallbackConfig callback = CallbackConfig.newBuilder().setEndpoint("http://test").build();
+    RetryPolicy retry = RetryPolicy.newBuilder().setMaxAttempts(3).build();
+    DLQPolicy dlq = DLQPolicy.newBuilder().setDestination("dlq-1").build();
+
+    Client client = new Client("client-1", "hashed-pass", false, callback, retry, dlq);
+    store.save(client);
+
+    Optional<Client> found = store.findById("client-1");
+    assertThat(found).isPresent();
+    assertThat(found.get().callbackConfig().getEndpoint()).isEqualTo("http://test");
+    assertThat(found.get().retryPolicy().getMaxAttempts()).isEqualTo(3);
+    assertThat(found.get().dlqPolicy().getDestination()).isEqualTo("dlq-1");
   }
 
   @Test
@@ -50,7 +70,7 @@ class RocksDBClientStoreTest {
 
   @Test
   void shouldDeleteClient() {
-    Client client = new Client("client-1", "hashed-pass", true);
+    Client client = new Client("client-1", "hashed-pass", true, null, null, null);
     store.save(client);
     assertThat(store.findById("client-1")).isPresent();
 
@@ -60,7 +80,7 @@ class RocksDBClientStoreTest {
 
   @Test
   void shouldPersistBetweenInstances() {
-    Client client = new Client("client-1", "hashed-pass", true);
+    Client client = new Client("client-1", "hashed-pass", true, null, null, null);
     store.save(client);
     store.close();
 
@@ -81,9 +101,6 @@ class RocksDBClientStoreTest {
   }
 
   private ServerConfig createConfig(String path) {
-    // We can't easily inject properties into ServerConfig, so we'll use system properties
-    // or assume it reads from the environment if we could mock it.
-    // For now, let's just use the default path and hope it works with tempDir
     System.setProperty("rocksdb.client.path", path);
     return new ServerConfig(null);
   }
