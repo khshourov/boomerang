@@ -17,7 +17,7 @@ public class TimerFactory {
    * @return a new {@link Timer} instance
    */
   public static Timer createHierarchicalTimingWheel(Consumer<TimerTask> dispatcher) {
-    return new HierarchicalTimingWheel(10, 64, dispatcher);
+    return new HierarchicalTimingWheel(10, 64, dispatcher, null);
   }
 
   /**
@@ -30,6 +30,23 @@ public class TimerFactory {
    */
   public static Timer createHierarchicalTimingWheel(
       long tickMs, int wheelSize, Consumer<TimerTask> dispatcher) {
-    return new HierarchicalTimingWheel(tickMs, wheelSize, dispatcher);
+    return new HierarchicalTimingWheel(tickMs, wheelSize, dispatcher, null);
+  }
+
+  /**
+   * Creates a {@link TieredTimer} with the specified configuration.
+   *
+   * @param dispatcher the consumer for expired tasks; must be non-null
+   * @param longTermStore the store for long-term tasks; must be non-null
+   * @param imminentWindowMs the time window for in-memory tasks; must be positive
+   * @param serverConfig the server configuration for timer tuning; must be non-null
+   * @return a new {@link Timer} instance
+   */
+  public static Timer createTieredTimer(
+      Consumer<TimerTask> dispatcher,
+      LongTermTaskStore longTermStore,
+      long imminentWindowMs,
+      io.boomerang.config.ServerConfig serverConfig) {
+    return new TieredTimer(dispatcher, longTermStore, imminentWindowMs, serverConfig);
   }
 }

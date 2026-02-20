@@ -111,6 +111,13 @@ class HierarchicalTimingWheelTest {
   }
 
   @Test
+  void shouldReturnShutdownStatus() {
+    assertThat(timer.isShutdown()).isFalse();
+    timer.shutdown();
+    assertThat(timer.isShutdown()).isTrue();
+  }
+
+  @Test
   void shouldSupportToString() {
     TimerTask task = new TimerTask(100, () -> {});
     TimerEntry entry = new TimerEntry(task);

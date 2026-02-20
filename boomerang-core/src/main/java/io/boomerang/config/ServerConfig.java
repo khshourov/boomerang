@@ -85,4 +85,22 @@ public class ServerConfig {
   public long getTimerAdvanceClockIntervalMs() {
     return Long.parseLong(properties.getProperty("timer.advance.clock.interval.ms", "200"));
   }
+
+  /**
+   * Gets the duration of a single tick in the innermost timing wheel.
+   *
+   * @return the tick duration in milliseconds
+   */
+  public long getTimerTickMs() {
+    return Long.parseLong(properties.getProperty("timer.tick.ms", "10"));
+  }
+
+  /**
+   * Gets the number of buckets in each level of the timing wheel.
+   *
+   * @return the wheel size
+   */
+  public int getTimerWheelSize() {
+    return Integer.parseInt(properties.getProperty("timer.wheel.size", "64"));
+  }
 }

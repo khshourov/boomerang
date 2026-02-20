@@ -96,4 +96,9 @@ public class HierarchicalTimingWheel implements Timer {
   public void shutdown() {
     workerThread.shutdownNow();
   }
+
+  @Override
+  public boolean isShutdown() {
+    return workerThread.isShutdown();
+  }
 }

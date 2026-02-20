@@ -15,4 +15,11 @@ public interface Timer {
 
   /** Shuts down the timer, releasing any background resources. */
   void shutdown();
+
+  /**
+   * Checks if the timer has been shut down.
+   *
+   * @return {@code true} if the timer is shut down, {@code false} otherwise
+   */
+  boolean isShutdown();
 }

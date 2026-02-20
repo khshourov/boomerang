@@ -6,6 +6,8 @@ import io.boomerang.model.Session;
 import io.boomerang.proto.CallbackConfig;
 import io.boomerang.proto.DLQPolicy;
 import io.boomerang.proto.RetryPolicy;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -16,6 +18,17 @@ class SessionManagerTest {
   @BeforeEach
   void setUp() {
     sessionManager = new SessionManager(new io.boomerang.config.ServerConfig(null));
+  }
+
+  @Test
+  void shouldVerifySessionExpiration() {
+    Session activeSession =
+        new Session("s1", "c1", null, null, null, Instant.now().plus(1, ChronoUnit.HOURS));
+    assertThat(activeSession.isExpired()).isFalse();
+
+    Session expiredSession =
+        new Session("s2", "c2", null, null, null, Instant.now().minus(1, ChronoUnit.HOURS));
+    assertThat(expiredSession.isExpired()).isTrue();
   }
 
   @Test
