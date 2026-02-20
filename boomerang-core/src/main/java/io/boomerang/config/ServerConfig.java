@@ -103,4 +103,14 @@ public class ServerConfig {
   public int getTimerWheelSize() {
     return Integer.parseInt(properties.getProperty("timer.wheel.size", "64"));
   }
+
+  /**
+   * Gets the time window for tasks to be kept in memory.
+   *
+   * @return the imminent window in milliseconds
+   */
+  public long getTimerImminentWindowMs() {
+    // Default to 30 minutes
+    return Long.parseLong(properties.getProperty("timer.imminent.window.ms", "1800000"));
+  }
 }

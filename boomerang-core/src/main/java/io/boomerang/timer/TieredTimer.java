@@ -32,18 +32,13 @@ public class TieredTimer implements Timer {
    *
    * @param dispatcher the consumer for expired tasks; must be non-null
    * @param longTermStore the store for long-term tasks; must be non-null
-   * @param imminentWindowMs the time window (in milliseconds) for tasks to be kept in memory; must
-   *     be positive
    * @param serverConfig the server configuration for timer tuning; must be non-null
    */
   public TieredTimer(
-      Consumer<TimerTask> dispatcher,
-      LongTermTaskStore longTermStore,
-      long imminentWindowMs,
-      ServerConfig serverConfig) {
+      Consumer<TimerTask> dispatcher, LongTermTaskStore longTermStore, ServerConfig serverConfig) {
     this.dispatcher = Objects.requireNonNull(dispatcher, "dispatcher must not be null");
     this.longTermStore = Objects.requireNonNull(longTermStore, "longTermStore must not be null");
-    this.imminentWindowMs = imminentWindowMs;
+    this.imminentWindowMs = serverConfig.getTimerImminentWindowMs();
     // Load tasks for the next imminent window when half of it has passed
     this.loadThresholdMs = imminentWindowMs / 2;
     this.lastLoadedTime = new AtomicLong(System.currentTimeMillis());
@@ -55,7 +50,8 @@ public class TieredTimer implements Timer {
             this::handleExpiredTask,
             serverConfig);
 
-    scheduleReactiveLoad();
+    // Initial load to recover tasks already due in the imminent window
+    reactiveLoad();
   }
 
   private void handleExpiredTask(TimerTask task) {

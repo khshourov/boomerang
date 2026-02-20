@@ -29,9 +29,14 @@ class TieredTimerTest {
           executionCount.incrementAndGet();
           task.getTask().run();
         };
-    serverConfig = new ServerConfig(null);
+    serverConfig = mock(ServerConfig.class);
+    when(serverConfig.getTimerImminentWindowMs()).thenReturn(WINDOW_MS);
+    when(serverConfig.getTimerTickMs()).thenReturn(10L);
+    when(serverConfig.getTimerWheelSize()).thenReturn(64);
+    when(serverConfig.getTimerAdvanceClockIntervalMs()).thenReturn(200L);
+
     longTermStore = spy(new InMemoryLongTermTaskStore());
-    tieredTimer = new TieredTimer(dispatcher, longTermStore, WINDOW_MS, serverConfig);
+    tieredTimer = new TieredTimer(dispatcher, longTermStore, serverConfig);
   }
 
   @AfterEach
@@ -115,8 +120,7 @@ class TieredTimerTest {
 
   @Test
   void shouldCreateTieredTimerViaFactory() {
-    Timer factoryTimer =
-        TimerFactory.createTieredTimer(task -> {}, longTermStore, 1000, serverConfig);
+    Timer factoryTimer = TimerFactory.createTieredTimer(task -> {}, longTermStore, serverConfig);
     assertThat(factoryTimer).isInstanceOf(TieredTimer.class);
     factoryTimer.shutdown();
   }
@@ -169,5 +173,14 @@ class TieredTimerTest {
 
     Collection<TimerTask> fetched2 = longTermStore.fetchTasksDueBefore(windowEnd);
     assertThat(fetched2).isEmpty();
+  }
+
+  @Test
+  void shouldPerformInitialLoadOnStartup() {
+    LongTermTaskStore startupStore = mock(LongTermTaskStore.class);
+    // Create a new timer with the mocked store
+    new TieredTimer(dispatcher, startupStore, serverConfig);
+    // Verify fetchTasksDueBefore was called once during construction
+    verify(startupStore, times(1)).fetchTasksDueBefore(anyLong());
   }
 }

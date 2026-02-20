@@ -38,15 +38,13 @@ public class TimerFactory {
    *
    * @param dispatcher the consumer for expired tasks; must be non-null
    * @param longTermStore the store for long-term tasks; must be non-null
-   * @param imminentWindowMs the time window for in-memory tasks; must be positive
    * @param serverConfig the server configuration for timer tuning; must be non-null
    * @return a new {@link Timer} instance
    */
   public static Timer createTieredTimer(
       Consumer<TimerTask> dispatcher,
       LongTermTaskStore longTermStore,
-      long imminentWindowMs,
       io.boomerang.config.ServerConfig serverConfig) {
-    return new TieredTimer(dispatcher, longTermStore, imminentWindowMs, serverConfig);
+    return new TieredTimer(dispatcher, longTermStore, serverConfig);
   }
 }
