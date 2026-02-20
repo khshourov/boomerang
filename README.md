@@ -34,7 +34,7 @@ Boomerang is a high-performance, distributed, and persistent scheduler designed 
 Contributions are welcome! Please adhere to the following:
 - **Branching:** Trunk-Based Development.
 - **Commits:** Follow [Conventional Commits](https://www.conventionalcommits.org/).
-- **Testing:** Minimum 90% code coverage is required for all new features.
+- **Testing:** Minimum 80% code coverage is required for all new features.
 - **Documentation:** Refer to the `docs/` directory for detailed [guidelines](docs/GUIDELINES.md), [specifications](docs/SPEC.md), and the full [implementation plan](docs/PLAN.md).
 
 ---
