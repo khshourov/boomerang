@@ -2,6 +2,7 @@ plugins {
     id("com.diffplug.spotless") version "6.25.0"
     id("java")
     id("jacoco")
+    id("info.solidsoft.pitest") version "1.19.0-rc.3" apply false
 }
 
 allprojects {
@@ -40,6 +41,16 @@ subprojects {
         reports {
             xml.required.set(true)
             html.required.set(true)
+        }
+    }
+
+    tasks.jacocoTestCoverageVerification {
+        violationRules {
+            rule {
+                limit {
+                    minimum = "0.80".toBigDecimal()
+                }
+            }
         }
     }
 

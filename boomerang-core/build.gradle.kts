@@ -1,3 +1,7 @@
+plugins {
+    id("info.solidsoft.pitest")
+}
+
 dependencies {
     implementation(project(":boomerang-proto"))
 
@@ -22,4 +26,12 @@ dependencies {
 
 tasks.test {
     useJUnitPlatform()
+}
+
+configure<info.solidsoft.gradle.pitest.PitestPluginExtension> {
+    junit5PluginVersion.set("1.2.1")
+    targetClasses.set(setOf("io.boomerang.*"))
+    threads.set(Runtime.getRuntime().availableProcessors())
+    outputFormats.set(setOf("XML", "HTML"))
+    mutationThreshold.set(80)
 }

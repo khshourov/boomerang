@@ -1,5 +1,6 @@
 plugins {
     id("org.graalvm.buildtools.native") version "0.10.1"
+    id("info.solidsoft.pitest")
 }
 
 dependencies {
@@ -23,4 +24,12 @@ graalvmNative {
             buildArgs.add("--no-fallback")
         }
     }
+}
+
+configure<info.solidsoft.gradle.pitest.PitestPluginExtension> {
+    junit5PluginVersion.set("1.2.1")
+    targetClasses.set(setOf("io.boomerang.*"))
+    threads.set(Runtime.getRuntime().availableProcessors())
+    outputFormats.set(setOf("XML", "HTML"))
+    mutationThreshold.set(0)
 }

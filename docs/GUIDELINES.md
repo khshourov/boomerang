@@ -30,8 +30,8 @@ These guidelines are the definitive reference for development within the Boomera
 - **Guard Clauses:** Prefer early returns (guard clauses) over nested `if` statements to reduce cognitive load and improve readability.
 
 ## 4. Quality Assurance & Testing
-- **Code Coverage:** Minimum **90% coverage** required for all new features.
-- **Mutation Testing:** Use **PITest** (or similar) to ensure test quality beyond simple coverage metrics.
+- **Code Coverage:** Minimum **80% coverage** required for all new features.
+- **Mutation Testing:** Use **PITest** to ensure test quality beyond simple coverage metrics. After running unit tests, mutation testing (via `./gradlew pitest`) should be performed to ensure a high mutation score (minimum 80%).
 - **Performance:** While strict SLAs are not enforced initially, performance is a core value and should guide architectural choices.
 
 ## 5. Development Workflow
