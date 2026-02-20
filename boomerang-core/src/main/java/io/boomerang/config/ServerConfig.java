@@ -113,4 +113,22 @@ public class ServerConfig {
     // Default to 30 minutes
     return Long.parseLong(properties.getProperty("timer.imminent.window.ms", "1800000"));
   }
+
+  /**
+   * Checks if RocksDB persistence is enabled.
+   *
+   * @return {@code true} if RocksDB is enabled, {@code false} otherwise
+   */
+  public boolean isRocksDbEnabled() {
+    return Boolean.parseBoolean(properties.getProperty("rocksdb.enabled", "true"));
+  }
+
+  /**
+   * Gets the filesystem path for the RocksDB data directory.
+   *
+   * @return the RocksDB path
+   */
+  public String getRocksDbPath() {
+    return properties.getProperty("rocksdb.path", "data/rocksdb");
+  }
 }

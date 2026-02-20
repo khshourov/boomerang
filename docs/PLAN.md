@@ -13,7 +13,7 @@ This plan tracks the development of Boomerang, a high-performance, distributed, 
 - [x] **Basic Task Lifecycle:** CRUD operations for tasks in the memory wheel.
 
 ## Phase 3: Persistence & Reliability
-- [ ] **RocksDB Integration:** Implement the time-sorted index for long-term tasks.
+- [x] **RocksDB Integration:** Implement the time-sorted index for long-term tasks.
 - [ ] **Client Credential Storage:** Implement encrypted persistent storage for admin and client credentials.
 - [ ] **Write-Ahead Log (WAL):** Ensure every task registration is durable before ACK.
 - [ ] **Recovery Logic:** Implement system startup logic to reload tasks from RocksDB into the HTW.

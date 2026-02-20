@@ -100,10 +100,17 @@ public class TieredTimer implements Timer {
 
     Collection<TimerTask> tasks = longTermStore.fetchTasksDueBefore(windowEnd);
     if (!tasks.isEmpty()) {
-      log.info("Transitioning {} tasks from long-term store to HTW", tasks.size());
+      int addedCount = 0;
       for (TimerTask task : tasks) {
-        imminentTimer.add(task);
+        if (imminentTimer.get(task.getTaskId()).isEmpty()) {
+          imminentTimer.add(task);
+          addedCount++;
+        }
       }
+      log.info(
+          "Transitioned {} new tasks from long-term store to HTW ({} total fetched)",
+          addedCount,
+          tasks.size());
     }
 
     lastLoadedTime.set(now);

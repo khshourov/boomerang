@@ -44,11 +44,47 @@ public class TimerTask {
    */
   public TimerTask(
       String taskId, long delayMs, byte[] payload, long repeatIntervalMs, Runnable task) {
+    this(taskId, System.currentTimeMillis() + delayMs, payload, repeatIntervalMs, task, true);
+  }
+
+  /**
+   * Internal constructor that allows setting an absolute expiration time.
+   *
+   * @param taskId the unique identifier for this task
+   * @param expirationMs the absolute expiration timestamp in milliseconds
+   * @param payload the opaque binary payload
+   * @param repeatIntervalMs the interval for repeated execution
+   * @param task the action to perform
+   * @param ignored dummy parameter to distinguish from the public constructor
+   */
+  private TimerTask(
+      String taskId,
+      long expirationMs,
+      byte[] payload,
+      long repeatIntervalMs,
+      Runnable task,
+      boolean ignored) {
     this.taskId = taskId != null ? taskId : UUID.randomUUID().toString();
-    this.expirationMs = System.currentTimeMillis() + delayMs;
+    this.expirationMs = expirationMs;
     this.payload = payload != null ? payload.clone() : null;
     this.repeatIntervalMs = repeatIntervalMs;
     this.task = Objects.requireNonNull(task, "Task must not be null");
+  }
+
+  /**
+   * Creates a new timer task with an absolute expiration timestamp.
+   *
+   * @param taskId the unique identifier for this task; if {@code null}, a UUID will be generated
+   * @param expirationMs the absolute expiration timestamp in milliseconds
+   * @param payload the opaque binary payload to be delivered; can be {@code null}
+   * @param repeatIntervalMs the interval in milliseconds for repeated execution; 0 for no
+   *     repetition
+   * @param task the action to perform when the task expires; must be non-null
+   * @return a new {@link TimerTask} instance
+   */
+  public static TimerTask withExpiration(
+      String taskId, long expirationMs, byte[] payload, long repeatIntervalMs, Runnable task) {
+    return new TimerTask(taskId, expirationMs, payload, repeatIntervalMs, task, true);
   }
 
   /**

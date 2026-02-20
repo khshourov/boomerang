@@ -186,6 +186,9 @@ class TieredTimerTest {
     verify(longTermStore, times(1)).save(task);
 
     longTermStore.delete(task);
+    // Since we now use Spy on InMemoryLongTermTaskStore, let's verify delete was called
+    verify(longTermStore, times(1)).delete(task);
+
     Collection<TimerTask> tasks =
         longTermStore.fetchTasksDueBefore(System.currentTimeMillis() + 5000);
     assertThat(tasks).isEmpty();
@@ -268,7 +271,7 @@ class TieredTimerTest {
   }
 
   @Test
-  void shouldClearStoreAfterFetch() {
+  void shouldNotDeleteFromStoreAfterFetch() {
     TimerTask task = new TimerTask(2000, () -> {});
     longTermStore.save(task);
 
@@ -276,8 +279,9 @@ class TieredTimerTest {
     Collection<TimerTask> fetched1 = longTermStore.fetchTasksDueBefore(windowEnd);
     assertThat(fetched1).hasSize(1);
 
+    // Fetch again; should still be there because fetch no longer deletes
     Collection<TimerTask> fetched2 = longTermStore.fetchTasksDueBefore(windowEnd);
-    assertThat(fetched2).isEmpty();
+    assertThat(fetched2).hasSize(1);
   }
 
   @Test

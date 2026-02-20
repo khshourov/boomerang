@@ -47,4 +47,22 @@ public class TimerFactory {
       io.boomerang.config.ServerConfig serverConfig) {
     return new TieredTimer(dispatcher, longTermStore, serverConfig);
   }
+
+  /**
+   * Creates a {@link TieredTimer} with a store selected based on server configuration.
+   *
+   * @param dispatcher the consumer for expired tasks; must be non-null
+   * @param serverConfig the server configuration; must be non-null
+   * @return a new {@link Timer} instance
+   */
+  public static Timer createTieredTimer(
+      Consumer<TimerTask> dispatcher, io.boomerang.config.ServerConfig serverConfig) {
+    LongTermTaskStore store;
+    if (serverConfig.isRocksDbEnabled()) {
+      store = new RocksDBLongTermTaskStore(serverConfig);
+    } else {
+      store = new InMemoryLongTermTaskStore();
+    }
+    return new TieredTimer(dispatcher, store, serverConfig);
+  }
 }

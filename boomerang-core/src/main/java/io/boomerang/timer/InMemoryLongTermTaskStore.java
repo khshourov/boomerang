@@ -37,15 +37,7 @@ public class InMemoryLongTermTaskStore implements LongTermTaskStore {
   @Override
   public synchronized Collection<TimerTask> fetchTasksDueBefore(long timestamp) {
     NavigableMap<Long, Collection<TimerTask>> subMap = timeIndex.headMap(timestamp, true);
-    Collection<TimerTask> tasks = subMap.values().stream().flatMap(Collection::stream).toList();
-
-    // Remove from both indexes
-    for (TimerTask task : tasks) {
-      idIndex.remove(task.getTaskId());
-    }
-    subMap.clear();
-
-    return tasks;
+    return subMap.values().stream().flatMap(Collection::stream).toList();
   }
 
   @Override
