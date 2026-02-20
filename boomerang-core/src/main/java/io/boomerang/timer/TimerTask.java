@@ -163,6 +163,29 @@ public class TimerTask {
   }
 
   /**
+   * Creates a new task representing the next repetition cycle of this task.
+   *
+   * <p>The attempt count is reset to 0 for the new cycle.
+   *
+   * @return a new {@link TimerTask} instance for the next repetition
+   * @throws IllegalStateException if the task is not repeatable
+   */
+  public TimerTask nextCycle() {
+    if (this.repeatIntervalMs <= 0) {
+      throw new IllegalStateException("Task is not repeatable: " + taskId);
+    }
+    return new TimerTask(
+        this.taskId,
+        this.clientId,
+        System.currentTimeMillis() + this.repeatIntervalMs,
+        this.payload,
+        this.repeatIntervalMs,
+        0,
+        this.task,
+        true);
+  }
+
+  /**
    * Gets the unique identifier for this task.
    *
    * @return the task ID

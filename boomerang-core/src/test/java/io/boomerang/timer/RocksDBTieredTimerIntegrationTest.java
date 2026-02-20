@@ -19,7 +19,8 @@ class RocksDBTieredTimerIntegrationTest {
   @TempDir Path tempDir;
 
   private TieredTimer tieredTimer;
-  private LongTermTaskStore rocksDbStore;
+  private final java.util.concurrent.atomic.AtomicReference<LongTermTaskStore> currentStore =
+      new java.util.concurrent.atomic.AtomicReference<>();
   private AtomicInteger executionCount;
   private Consumer<TimerTask> dispatcher;
   private ServerConfig serverConfig;
@@ -28,11 +29,14 @@ class RocksDBTieredTimerIntegrationTest {
   @BeforeEach
   void setUp() {
     executionCount = new AtomicInteger(0);
-    // In a real scenario, the dispatcher would use the taskId or payload to determine the action.
-    // For this test, we'll increment the executionCount and handle the recovery latch by taskId.
+    // Use currentStore reference to avoid stale references after restarts
     dispatcher =
         task -> {
           executionCount.incrementAndGet();
+          LongTermTaskStore store = currentStore.get();
+          if (store != null) {
+            store.delete(task);
+          }
           if ("task-to-recover".equals(task.getTaskId())) {
             recoveryLatch.countDown();
           }
@@ -44,7 +48,8 @@ class RocksDBTieredTimerIntegrationTest {
     when(serverConfig.getTimerWheelSize()).thenReturn(64);
     when(serverConfig.getTimerAdvanceClockIntervalMs()).thenReturn(50L);
 
-    rocksDbStore = new RocksDBLongTermTaskStore(serverConfig);
+    RocksDBLongTermTaskStore rocksDbStore = new RocksDBLongTermTaskStore(serverConfig);
+    currentStore.set(rocksDbStore);
     tieredTimer = new TieredTimer(dispatcher, rocksDbStore, serverConfig);
   }
 
@@ -55,7 +60,8 @@ class RocksDBTieredTimerIntegrationTest {
     if (tieredTimer != null) {
       tieredTimer.shutdown();
     }
-    if (rocksDbStore instanceof RocksDBLongTermTaskStore rocks) {
+    LongTermTaskStore store = currentStore.getAndSet(null);
+    if (store instanceof RocksDBLongTermTaskStore rocks) {
       rocks.close();
     }
   }
@@ -65,33 +71,30 @@ class RocksDBTieredTimerIntegrationTest {
     // 1. Create a task that is just outside the window
     recoveryLatch = new CountDownLatch(1);
     TimerTask task = new TimerTask("task-to-recover", "client1", 1500, null, 0, () -> {});
-    rocksDbStore.save(task);
+    currentStore.get().save(task);
 
     // 2. Restart the timer (simulated by creating a new one with same store)
     // First shutdown existing
     tieredTimer.shutdown();
 
-    // We need to re-open RocksDB or reuse the same handle.
-    // Let's create a NEW store and NEW timer pointed at the same path.
-    if (rocksDbStore instanceof RocksDBLongTermTaskStore rocks) {
+    // Close the old store and open a new one
+    LongTermTaskStore oldStore = currentStore.get();
+    if (oldStore instanceof RocksDBLongTermTaskStore rocks) {
       rocks.close();
     }
 
     RocksDBLongTermTaskStore newStore = new RocksDBLongTermTaskStore(serverConfig);
+    currentStore.set(newStore);
     TieredTimer newTimer = new TieredTimer(dispatcher, newStore, serverConfig);
 
     try {
       // Wait for the task to be loaded and executed.
-      // It's scheduled at +1500ms. reactiveLoad runs at 0ms (fetch <1000ms), 500ms (fetch <1500ms),
-      // 1000ms (fetch <2000ms).
-      // It should be picked up at 1000ms load or later.
-
       assertThat(recoveryLatch.await(5, TimeUnit.SECONDS)).isTrue();
       assertThat(executionCount.get()).isEqualTo(1);
     } finally {
       newTimer.shutdown();
       newStore.close();
-      rocksDbStore = null; // Prevent tearDown from closing it again
+      currentStore.set(null);
       tieredTimer = null;
     }
   }

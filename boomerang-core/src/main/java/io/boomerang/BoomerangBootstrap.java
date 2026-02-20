@@ -63,6 +63,14 @@ public class BoomerangBootstrap {
                     task.getTaskId(),
                     task.getPayload() != null ? task.getPayload().length : 0);
                 // TODO: Wire into CallbackEngine in Phase 4
+
+                // Task successfully dispatched (or handled by external engine)
+                taskStore.delete(task);
+
+                // Automatic rescheduling for repeatable tasks only on SUCCESSFUL dispatch.
+                if (task.getRepeatIntervalMs() > 0) {
+                  resubmitTask(task.nextCycle());
+                }
               } catch (Exception e) {
                 log.error("Failed to dispatch task {}: {}", task.getTaskId(), e.getMessage());
                 retryEngine.handleFailure(task, e);

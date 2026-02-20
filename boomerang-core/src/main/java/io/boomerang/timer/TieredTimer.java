@@ -61,26 +61,8 @@ public class TieredTimer implements Timer {
       return;
     }
 
-    // dispatcher.accept(task) will handle execution and its own errors/retries.
+    // dispatcher.accept(task) will handle execution, errors/retries, deletion, and rescheduling.
     dispatcher.accept(task);
-
-    // Once a task is successfully dispatched (or handed over to the retry logic by the dispatcher),
-    // it can be safely removed from long-term storage for THIS trigger.
-    longTermStore.delete(task);
-
-    // Automatic rescheduling for repeatable tasks
-    if (task.getRepeatIntervalMs() > 0) {
-      log.debug("Rescheduling repeatable task {}", task.getTaskId());
-      TimerTask nextTask =
-          new TimerTask(
-              task.getTaskId(),
-              task.getClientId(),
-              task.getRepeatIntervalMs(),
-              task.getPayload(),
-              task.getRepeatIntervalMs(),
-              task.getTask());
-      this.add(nextTask);
-    }
   }
 
   private static class InternalTimerTask extends TimerTask {

@@ -26,10 +26,16 @@ class TieredTimerTest {
   @BeforeEach
   void setUp() {
     executionCount = new AtomicInteger(0);
+    longTermStore = spy(new InMemoryLongTermTaskStore());
     dispatcher =
         task -> {
           executionCount.incrementAndGet();
           task.getTask().run();
+          // The dispatcher is now responsible for cleanup and rescheduling
+          longTermStore.delete(task);
+          if (task.getRepeatIntervalMs() > 0) {
+            tieredTimer.add(task.nextCycle());
+          }
         };
     serverConfig = mock(ServerConfig.class);
     when(serverConfig.getTimerImminentWindowMs()).thenReturn(WINDOW_MS);
@@ -37,7 +43,6 @@ class TieredTimerTest {
     when(serverConfig.getTimerWheelSize()).thenReturn(64);
     when(serverConfig.getTimerAdvanceClockIntervalMs()).thenReturn(50L);
 
-    longTermStore = spy(new InMemoryLongTermTaskStore());
     tieredTimer = new TieredTimer(dispatcher, longTermStore, serverConfig);
   }
 
