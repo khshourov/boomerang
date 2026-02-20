@@ -42,6 +42,8 @@ public class RocksDBLongTermTaskStore implements LongTermTaskStore, AutoCloseabl
   private static final String CF_ID_INDEX = "id_index";
 
   private final RocksDB db;
+  private final DBOptions dbOptions;
+  private final ColumnFamilyOptions cfOptions;
   private final ColumnFamilyHandle defaultHandle;
   private final ColumnFamilyHandle timeIndexHandle;
   private final ColumnFamilyHandle idIndexHandle;
@@ -61,23 +63,22 @@ public class RocksDBLongTermTaskStore implements LongTermTaskStore, AutoCloseabl
     try {
       Files.createDirectories(Paths.get(dbPath));
 
-      try (DBOptions dbOptions =
-              new DBOptions().setCreateIfMissing(true).setCreateMissingColumnFamilies(true);
-          ColumnFamilyOptions cfOptions = new ColumnFamilyOptions()) {
+      this.dbOptions =
+          new DBOptions().setCreateIfMissing(true).setCreateMissingColumnFamilies(true);
+      this.cfOptions = new ColumnFamilyOptions();
 
-        List<ColumnFamilyDescriptor> cfDescriptors = new ArrayList<>();
-        cfDescriptors.add(new ColumnFamilyDescriptor(RocksDB.DEFAULT_COLUMN_FAMILY, cfOptions));
-        cfDescriptors.add(new ColumnFamilyDescriptor(CF_TIME_INDEX.getBytes(), cfOptions));
-        cfDescriptors.add(new ColumnFamilyDescriptor(CF_ID_INDEX.getBytes(), cfOptions));
+      List<ColumnFamilyDescriptor> cfDescriptors = new ArrayList<>();
+      cfDescriptors.add(new ColumnFamilyDescriptor(RocksDB.DEFAULT_COLUMN_FAMILY, cfOptions));
+      cfDescriptors.add(new ColumnFamilyDescriptor(CF_TIME_INDEX.getBytes(), cfOptions));
+      cfDescriptors.add(new ColumnFamilyDescriptor(CF_ID_INDEX.getBytes(), cfOptions));
 
-        List<ColumnFamilyHandle> cfHandles = new ArrayList<>();
-        this.db = RocksDB.open(dbOptions, dbPath, cfDescriptors, cfHandles);
-        this.defaultHandle = cfHandles.get(0);
-        this.timeIndexHandle = cfHandles.get(1);
-        this.idIndexHandle = cfHandles.get(2);
+      List<ColumnFamilyHandle> cfHandles = new ArrayList<>();
+      this.db = RocksDB.open(dbOptions, dbPath, cfDescriptors, cfHandles);
+      this.defaultHandle = cfHandles.get(0);
+      this.timeIndexHandle = cfHandles.get(1);
+      this.idIndexHandle = cfHandles.get(2);
 
-        log.info("Initialized RocksDB long-term store at {}", dbPath);
-      }
+      log.info("Initialized RocksDB long-term store at {}", dbPath);
     } catch (IOException | RocksDBException e) {
       log.error("Failed to initialize RocksDB at {}", dbPath, e);
       throw new StorageException("Could not initialize RocksDB long-term store at " + dbPath, e);
@@ -186,6 +187,8 @@ public class RocksDBLongTermTaskStore implements LongTermTaskStore, AutoCloseabl
     idIndexHandle.close();
     defaultHandle.close();
     db.close();
+    dbOptions.close();
+    cfOptions.close();
   }
 
   private byte[] longToBytes(long value) {
