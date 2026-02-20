@@ -1,13 +1,12 @@
 package io.boomerang.auth;
 
+import io.boomerang.config.ServerConfig;
 import io.boomerang.model.Client;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.security.spec.InvalidKeySpecException;
 import java.util.Base64;
-import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
 import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.PBEKeySpec;
 import org.slf4j.Logger;
@@ -24,10 +23,31 @@ import org.slf4j.LoggerFactory;
 public class AuthService {
   private static final Logger log = LoggerFactory.getLogger(AuthService.class);
   private static final SecureRandom SECURE_RANDOM = new SecureRandom();
-  private final Map<String, Client> clients = new ConcurrentHashMap<>();
+  private final ClientStore clientStore;
+  private final ServerConfig serverConfig;
   private static final int ITERATIONS = 10000;
   private static final int KEY_LENGTH = 256;
   private static final String ALGORITHM = "PBKDF2WithHmacSHA256";
+
+  /**
+   * Constructs an authentication service.
+   *
+   * @param clientStore the persistent store for clients; must be non-null
+   * @param serverConfig the configuration for admin provisioning; must be non-null
+   */
+  public AuthService(ClientStore clientStore, ServerConfig serverConfig) {
+    this.clientStore = clientStore;
+    this.serverConfig = serverConfig;
+    provisionAdmin();
+  }
+
+  private void provisionAdmin() {
+    String adminId = serverConfig.getAdminClientId();
+    if (clientStore.findById(adminId).isEmpty()) {
+      log.info("Provisioning initial admin client: {}", adminId);
+      registerClient(adminId, serverConfig.getAdminPassword(), true);
+    }
+  }
 
   /**
    * Registers a new client with the specified credentials.
@@ -38,7 +58,7 @@ public class AuthService {
    */
   public void registerClient(String clientId, String password, boolean isAdmin) {
     String hashedPassword = hashPassword(password);
-    clients.put(clientId, new Client(clientId, hashedPassword, isAdmin));
+    clientStore.save(new Client(clientId, hashedPassword, isAdmin));
     log.info("Registered client: {} (Admin: {})", clientId, isAdmin);
   }
 
@@ -72,11 +92,8 @@ public class AuthService {
    * @return {@code true} if the credentials are valid, {@code false} otherwise
    */
   public boolean authenticate(String clientId, String password) {
-    Client client = clients.get(clientId);
-    if (client == null) {
-      return false;
-    }
-    return verifyPassword(password, client.hashedPassword());
+    Optional<Client> client = clientStore.findById(clientId);
+    return client.filter(value -> verifyPassword(password, value.hashedPassword())).isPresent();
   }
 
   /**
@@ -86,7 +103,7 @@ public class AuthService {
    * @return an {@link Optional} containing the {@link Client} if found, or empty if not
    */
   public Optional<Client> getClient(String clientId) {
-    return Optional.ofNullable(clients.get(clientId));
+    return clientStore.findById(clientId);
   }
 
   private String hashPassword(String password) {
@@ -115,7 +132,7 @@ public class AuthService {
       SecretKeyFactory factory = SecretKeyFactory.getInstance(ALGORITHM);
       return factory.generateSecret(spec).getEncoded();
     } catch (NoSuchAlgorithmException | InvalidKeySpecException e) {
-      throw new RuntimeException("Error hashing password", e);
+      throw new SecurityException("Error hashing password", e);
     }
   }
 }

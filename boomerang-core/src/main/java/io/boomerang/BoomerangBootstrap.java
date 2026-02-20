@@ -1,6 +1,8 @@
 package io.boomerang;
 
 import io.boomerang.auth.AuthService;
+import io.boomerang.auth.ClientStore;
+import io.boomerang.auth.RocksDBClientStore;
 import io.boomerang.config.ServerConfig;
 import io.boomerang.session.SessionManager;
 import org.slf4j.Logger;
@@ -19,6 +21,7 @@ public class BoomerangBootstrap {
   private final AuthService authService;
   private final SessionManager sessionManager;
   private final ServerConfig serverConfig;
+  private final ClientStore clientStore;
 
   /**
    * Constructs a bootstrap instance with the provided server configuration.
@@ -27,21 +30,26 @@ public class BoomerangBootstrap {
    */
   public BoomerangBootstrap(ServerConfig serverConfig) {
     this.serverConfig = serverConfig;
-    this.authService = new AuthService();
+    this.clientStore = new RocksDBClientStore(serverConfig);
+    this.authService = new AuthService(clientStore, serverConfig);
     this.sessionManager = new SessionManager(serverConfig);
   }
 
   /** Starts the Boomerang core services. */
   public void start() {
     log.info("Starting Boomerang core...");
-    registerAdminClient();
   }
 
-  private void registerAdminClient() {
-    String adminId = serverConfig.getAdminClientId();
-    String adminPassword = serverConfig.getAdminPassword();
-    authService.registerClient(adminId, adminPassword, true);
-    log.info("Admin client '{}' registered.", adminId);
+  /**
+   * Closes the Boomerang core services and releases resources.
+   *
+   * @throws Exception if an error occurs during shutdown
+   */
+  public void close() throws Exception {
+    log.info("Stopping Boomerang core...");
+    if (clientStore != null) {
+      clientStore.close();
+    }
   }
 
   /**

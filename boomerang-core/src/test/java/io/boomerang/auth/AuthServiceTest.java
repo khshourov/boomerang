@@ -2,6 +2,7 @@ package io.boomerang.auth;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import io.boomerang.config.ServerConfig;
 import io.boomerang.model.Client;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -9,10 +10,13 @@ import org.junit.jupiter.api.Test;
 
 class AuthServiceTest {
   private AuthService authService;
+  private ClientStore clientStore;
 
   @BeforeEach
   void setUp() {
-    authService = new AuthService();
+    clientStore = new MemoryClientStore();
+    ServerConfig serverConfig = new ServerConfig(null);
+    authService = new AuthService(clientStore, serverConfig);
   }
 
   @Test
@@ -43,9 +47,12 @@ class AuthServiceTest {
 
   @Test
   void shouldRegisterNewClientByAdmin() {
-    authService.registerClient("admin", "admin123", true);
+    // Note: 'admin' is already provisioned by AuthService constructor if it's in ServerConfig
+    // Let's use the provisioned admin or register a new one.
+    authService.registerClient("admin-user", "admin123", true);
 
-    boolean success = authService.registerClientByAdmin("admin", "new-client", "pass123", false);
+    boolean success =
+        authService.registerClientByAdmin("admin-user", "new-client", "pass123", false);
     assertThat(success).isTrue();
 
     assertThat(authService.authenticate("new-client", "pass123")).isTrue();

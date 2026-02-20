@@ -49,13 +49,21 @@ public class ServerConfig {
     }
   }
 
+  private String getProperty(String key, String defaultValue) {
+    String value = System.getProperty(key);
+    if (value == null) {
+      value = properties.getProperty(key, defaultValue);
+    }
+    return value;
+  }
+
   /**
    * Gets the administrative client identifier.
    *
    * @return the admin client ID
    */
   public String getAdminClientId() {
-    return properties.getProperty("admin.client.id", "admin");
+    return getProperty("admin.client.id", "admin");
   }
 
   /**
@@ -65,7 +73,7 @@ public class ServerConfig {
    */
   public String getAdminPassword() {
     // TODO: Implement decryption if the file is encrypted.
-    return properties.getProperty("admin.password", "admin123");
+    return getProperty("admin.password", "admin123");
   }
 
   /**
@@ -74,7 +82,7 @@ public class ServerConfig {
    * @return the session timeout in minutes
    */
   public long getSessionTimeoutMinutes() {
-    return Long.parseLong(properties.getProperty("session.timeout.minutes", "60"));
+    return Long.parseLong(getProperty("session.timeout.minutes", "60"));
   }
 
   /**
@@ -83,7 +91,7 @@ public class ServerConfig {
    * @return the clock advancement interval in milliseconds
    */
   public long getTimerAdvanceClockIntervalMs() {
-    return Long.parseLong(properties.getProperty("timer.advance.clock.interval.ms", "200"));
+    return Long.parseLong(getProperty("timer.advance.clock.interval.ms", "200"));
   }
 
   /**
@@ -92,7 +100,7 @@ public class ServerConfig {
    * @return the tick duration in milliseconds
    */
   public long getTimerTickMs() {
-    return Long.parseLong(properties.getProperty("timer.tick.ms", "10"));
+    return Long.parseLong(getProperty("timer.tick.ms", "10"));
   }
 
   /**
@@ -101,7 +109,7 @@ public class ServerConfig {
    * @return the wheel size
    */
   public int getTimerWheelSize() {
-    return Integer.parseInt(properties.getProperty("timer.wheel.size", "64"));
+    return Integer.parseInt(getProperty("timer.wheel.size", "64"));
   }
 
   /**
@@ -111,7 +119,7 @@ public class ServerConfig {
    */
   public long getTimerImminentWindowMs() {
     // Default to 30 minutes
-    return Long.parseLong(properties.getProperty("timer.imminent.window.ms", "1800000"));
+    return Long.parseLong(getProperty("timer.imminent.window.ms", "1800000"));
   }
 
   /**
@@ -120,7 +128,7 @@ public class ServerConfig {
    * @return {@code true} if RocksDB is enabled, {@code false} otherwise
    */
   public boolean isRocksDbEnabled() {
-    return Boolean.parseBoolean(properties.getProperty("rocksdb.enabled", "true"));
+    return Boolean.parseBoolean(getProperty("rocksdb.enabled", "true"));
   }
 
   /**
@@ -129,6 +137,31 @@ public class ServerConfig {
    * @return the RocksDB path
    */
   public String getRocksDbPath() {
-    return properties.getProperty("rocksdb.path", "data/rocksdb");
+    return getProperty("rocksdb.path", "data/rocksdb");
+  }
+
+  /**
+   * Gets the filesystem path for the RocksDB client storage directory.
+   *
+   * @return the RocksDB client path
+   */
+  public String getRocksDbClientPath() {
+    return getProperty("rocksdb.client.path", "data/clients");
+  }
+
+  /**
+   * Gets the master key for AES encryption.
+   *
+   * <p>This key is retrieved from the {@code BOOMERANG_MASTER_KEY} environment variable or system
+   * property.
+   *
+   * @return the encryption master key, or null if not set
+   */
+  public String getEncryptionMasterKey() {
+    String key = System.getenv("BOOMERANG_MASTER_KEY");
+    if (key == null || key.isEmpty()) {
+      key = System.getProperty("BOOMERANG_MASTER_KEY");
+    }
+    return key;
   }
 }
