@@ -4,10 +4,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import io.boomerang.config.ServerConfig;
+import io.boomerang.model.CallbackConfig;
 import io.boomerang.model.Client;
-import io.boomerang.proto.CallbackConfig;
-import io.boomerang.proto.DLQPolicy;
-import io.boomerang.proto.RetryPolicy;
+import io.boomerang.model.DLQPolicy;
+import io.boomerang.model.RetryPolicy;
 import io.boomerang.timer.StorageException;
 import java.nio.file.Path;
 import java.util.Base64;
@@ -49,18 +49,18 @@ class RocksDBClientStoreTest {
 
   @Test
   void shouldPersistPolicies() {
-    CallbackConfig callback = CallbackConfig.newBuilder().setEndpoint("http://test").build();
-    RetryPolicy retry = RetryPolicy.newBuilder().setMaxAttempts(3).build();
-    DLQPolicy dlq = DLQPolicy.newBuilder().setDestination("dlq-1").build();
+    CallbackConfig callback = new CallbackConfig(CallbackConfig.Protocol.HTTP, "http://test");
+    RetryPolicy retry = new RetryPolicy(3, RetryPolicy.BackoffStrategy.FIXED, 1000, 0);
+    DLQPolicy dlq = new DLQPolicy("dlq-1");
 
     Client client = new Client("client-1", "hashed-pass", false, callback, retry, dlq);
     store.save(client);
 
     Optional<Client> found = store.findById("client-1");
     assertThat(found).isPresent();
-    assertThat(found.get().callbackConfig().getEndpoint()).isEqualTo("http://test");
-    assertThat(found.get().retryPolicy().getMaxAttempts()).isEqualTo(3);
-    assertThat(found.get().dlqPolicy().getDestination()).isEqualTo("dlq-1");
+    assertThat(found.get().callbackConfig().endpoint()).isEqualTo("http://test");
+    assertThat(found.get().retryPolicy().maxAttempts()).isEqualTo(3);
+    assertThat(found.get().dlqPolicy().destination()).isEqualTo("dlq-1");
   }
 
   @Test

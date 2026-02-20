@@ -3,9 +3,9 @@ package io.boomerang.auth;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import io.boomerang.config.ServerConfig;
+import io.boomerang.model.CallbackConfig;
 import io.boomerang.model.Client;
 import io.boomerang.model.Session;
-import io.boomerang.proto.CallbackConfig;
 import io.boomerang.session.SessionManager;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -39,14 +39,14 @@ class AuthServiceTest {
   @Test
   void shouldReturnSessionWithDefaultPolicies() {
     CallbackConfig defaultCallback =
-        CallbackConfig.newBuilder().setEndpoint("http://default").build();
+        new CallbackConfig(CallbackConfig.Protocol.HTTP, "http://default");
     authService.registerClient("test-client", "password123", false, defaultCallback, null, null);
 
     Optional<Session> session = authService.authenticate("test-client", "password123");
 
     assertThat(session).isPresent();
     assertThat(session.get().clientId()).isEqualTo("test-client");
-    assertThat(session.get().callbackConfig().getEndpoint()).isEqualTo("http://default");
+    assertThat(session.get().callbackConfig().endpoint()).isEqualTo("http://default");
   }
 
   @Test

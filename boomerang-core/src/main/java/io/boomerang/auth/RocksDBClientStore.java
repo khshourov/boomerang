@@ -1,10 +1,10 @@
 package io.boomerang.auth;
 
 import io.boomerang.config.ServerConfig;
+import io.boomerang.model.CallbackConfig;
 import io.boomerang.model.Client;
-import io.boomerang.proto.CallbackConfig;
-import io.boomerang.proto.DLQPolicy;
-import io.boomerang.proto.RetryPolicy;
+import io.boomerang.model.DLQPolicy;
+import io.boomerang.model.RetryPolicy;
 import io.boomerang.timer.StorageException;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -139,8 +139,8 @@ public class RocksDBClientStore implements ClientStore, AutoCloseable {
         dos.writeBoolean(false);
       } else {
         dos.writeBoolean(true);
-        dos.writeInt(callback.getProtocolValue());
-        dos.writeUTF(callback.getEndpoint());
+        dos.writeInt(callback.protocol().ordinal());
+        dos.writeUTF(callback.endpoint());
       }
 
       // Serialize RetryPolicy
@@ -149,10 +149,10 @@ public class RocksDBClientStore implements ClientStore, AutoCloseable {
         dos.writeBoolean(false);
       } else {
         dos.writeBoolean(true);
-        dos.writeInt(retry.getMaxAttempts());
-        dos.writeInt(retry.getStrategyValue());
-        dos.writeLong(retry.getIntervalMs());
-        dos.writeLong(retry.getMaxIntervalMs());
+        dos.writeInt(retry.maxAttempts());
+        dos.writeInt(retry.strategy().ordinal());
+        dos.writeLong(retry.intervalMs());
+        dos.writeLong(retry.maxIntervalMs());
       }
 
       // Serialize DLQPolicy
@@ -161,7 +161,7 @@ public class RocksDBClientStore implements ClientStore, AutoCloseable {
         dos.writeBoolean(false);
       } else {
         dos.writeBoolean(true);
-        dos.writeUTF(dlq.getDestination());
+        dos.writeUTF(dlq.destination());
       }
 
       return baos.toByteArray();
@@ -179,28 +179,24 @@ public class RocksDBClientStore implements ClientStore, AutoCloseable {
       CallbackConfig callback = null;
       if (dis.readBoolean()) {
         callback =
-            CallbackConfig.newBuilder()
-                .setProtocolValue(dis.readInt())
-                .setEndpoint(dis.readUTF())
-                .build();
+            new CallbackConfig(CallbackConfig.Protocol.values()[dis.readInt()], dis.readUTF());
       }
 
       // Deserialize RetryPolicy
       RetryPolicy retry = null;
       if (dis.readBoolean()) {
         retry =
-            RetryPolicy.newBuilder()
-                .setMaxAttempts(dis.readInt())
-                .setStrategyValue(dis.readInt())
-                .setIntervalMs(dis.readLong())
-                .setMaxIntervalMs(dis.readLong())
-                .build();
+            new RetryPolicy(
+                dis.readInt(),
+                RetryPolicy.BackoffStrategy.values()[dis.readInt()],
+                dis.readLong(),
+                dis.readLong());
       }
 
       // Deserialize DLQPolicy
       DLQPolicy dlq = null;
       if (dis.readBoolean()) {
-        dlq = DLQPolicy.newBuilder().setDestination(dis.readUTF()).build();
+        dlq = new DLQPolicy(dis.readUTF());
       }
 
       return new Client(clientId, hashedPassword, isAdmin, callback, retry, dlq);

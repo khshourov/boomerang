@@ -1,11 +1,11 @@
 package io.boomerang.auth;
 
 import io.boomerang.config.ServerConfig;
+import io.boomerang.model.CallbackConfig;
 import io.boomerang.model.Client;
+import io.boomerang.model.DLQPolicy;
+import io.boomerang.model.RetryPolicy;
 import io.boomerang.model.Session;
-import io.boomerang.proto.CallbackConfig;
-import io.boomerang.proto.DLQPolicy;
-import io.boomerang.proto.RetryPolicy;
 import io.boomerang.session.SessionManager;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;

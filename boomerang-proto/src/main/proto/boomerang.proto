@@ -30,9 +30,6 @@ message BoomerangEnvelope {
 message AuthHandshake {
     string client_id = 1;             // The unique identifier for the client
     string password = 2;              // The plain-text password for authentication
-    CallbackConfig callback = 3;      // Optional: Session-level override for callback configuration
-    RetryPolicy retry = 4;            // Optional: Session-level override for retry policy
-    DLQPolicy dlq = 5;                // Optional: Session-level override for dead-letter queue policy
 }
 
 // Client registration adds a new client with their default policies.

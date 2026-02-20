@@ -1,9 +1,9 @@
 package io.boomerang.session;
 
+import io.boomerang.model.CallbackConfig;
+import io.boomerang.model.DLQPolicy;
+import io.boomerang.model.RetryPolicy;
 import io.boomerang.model.Session;
-import io.boomerang.proto.CallbackConfig;
-import io.boomerang.proto.DLQPolicy;
-import io.boomerang.proto.RetryPolicy;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;

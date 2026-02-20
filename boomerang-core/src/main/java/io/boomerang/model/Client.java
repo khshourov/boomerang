@@ -1,9 +1,5 @@
 package io.boomerang.model;
 
-import io.boomerang.proto.CallbackConfig;
-import io.boomerang.proto.DLQPolicy;
-import io.boomerang.proto.RetryPolicy;
-
 /**
  * Represents an authenticated client in the system.
  *
