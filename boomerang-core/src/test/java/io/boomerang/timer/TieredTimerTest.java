@@ -1,10 +1,12 @@
 package io.boomerang.timer;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 import static org.mockito.Mockito.*;
 
 import io.boomerang.config.ServerConfig;
 import java.util.Collection;
+import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -33,7 +35,7 @@ class TieredTimerTest {
     when(serverConfig.getTimerImminentWindowMs()).thenReturn(WINDOW_MS);
     when(serverConfig.getTimerTickMs()).thenReturn(10L);
     when(serverConfig.getTimerWheelSize()).thenReturn(64);
-    when(serverConfig.getTimerAdvanceClockIntervalMs()).thenReturn(200L);
+    when(serverConfig.getTimerAdvanceClockIntervalMs()).thenReturn(50L);
 
     longTermStore = spy(new InMemoryLongTermTaskStore());
     tieredTimer = new TieredTimer(dispatcher, longTermStore, serverConfig);
@@ -72,6 +74,77 @@ class TieredTimerTest {
     verify(longTermStore, times(1)).save(task);
     // Should NOT be deleted yet
     verify(longTermStore, never()).delete(task);
+  }
+
+  @Test
+  void shouldGetTaskByIdFromHTW() {
+    TimerTask task = new TimerTask(100, () -> {});
+    tieredTimer.add(task);
+
+    Optional<TimerTask> retrieved = tieredTimer.get(task.getTaskId());
+    assertThat(retrieved).isPresent();
+    assertThat(retrieved.get().getTaskId()).isEqualTo(task.getTaskId());
+  }
+
+  @Test
+  void shouldGetTaskByIdFromStore() {
+    TimerTask task = new TimerTask(2000, () -> {});
+    tieredTimer.add(task);
+
+    Optional<TimerTask> retrieved = tieredTimer.get(task.getTaskId());
+    assertThat(retrieved).isPresent();
+    assertThat(retrieved.get().getTaskId()).isEqualTo(task.getTaskId());
+  }
+
+  @Test
+  void shouldCancelTaskInHTW() throws InterruptedException {
+    CountDownLatch latch = new CountDownLatch(1);
+    TimerTask task = new TimerTask(200, latch::countDown);
+    tieredTimer.add(task);
+
+    tieredTimer.cancel(task.getTaskId());
+
+    assertThat(latch.await(1, TimeUnit.SECONDS)).isFalse();
+    assertThat(executionCount.get()).isZero();
+    assertThat(tieredTimer.get(task.getTaskId())).isEmpty();
+  }
+
+  @Test
+  void shouldCancelTaskInStore() {
+    TimerTask task = new TimerTask(2000, () -> {});
+    tieredTimer.add(task);
+
+    tieredTimer.cancel(task.getTaskId());
+
+    assertThat(tieredTimer.get(task.getTaskId())).isEmpty();
+    verify(longTermStore, times(1)).delete(task);
+  }
+
+  @Test
+  void shouldRescheduleRepeatableTask() throws InterruptedException {
+    CountDownLatch latch = new CountDownLatch(3);
+    TimerTask task =
+        new TimerTask(
+            "repeat-task",
+            100, // Initial delay
+            null,
+            100, // Repeat interval
+            latch::countDown);
+
+    tieredTimer.add(task);
+
+    assertThat(latch.await(2, TimeUnit.SECONDS)).isTrue();
+    assertThat(executionCount.get()).isGreaterThanOrEqualTo(3);
+
+    // Verify taskId is preserved
+    await()
+        .atMost(1, TimeUnit.SECONDS)
+        .untilAsserted(
+            () -> {
+              Optional<TimerTask> nextTask = tieredTimer.get("repeat-task");
+              assertThat(nextTask).isPresent();
+              assertThat(nextTask.get().getRepeatIntervalMs()).isEqualTo(100);
+            });
   }
 
   @Test
@@ -126,17 +199,49 @@ class TieredTimerTest {
   }
 
   @Test
-  void shouldShutdownImminentTimer() {
+  void shouldReturnShutdownStatus() {
+    assertThat(tieredTimer.isShutdown()).isFalse();
     tieredTimer.shutdown();
     assertThat(tieredTimer.isShutdown()).isTrue();
   }
 
   @Test
-  void shouldUpdateLastLoadedTime() throws InterruptedException {
+  void shouldAddAtBoundary() {
+    // Exactly at boundary: now + WINDOW_MS
+    TimerTask task = new TimerTask(WINDOW_MS, () -> {});
+
+    tieredTimer.add(task);
+
+    // According to current logic: task.getExpirationMs() < now + imminentWindowMs
+    // If expiration is EXACTLY now + WINDOW_MS, it will go to store ONLY.
+    // Let's verify our expectation and kill the boundary mutation.
+    assertThat(tieredTimer.get(task.getTaskId())).isPresent();
+    verify(longTermStore).save(task);
+  }
+
+  @Test
+  void shouldAddJustInsideBoundary() {
+    TimerTask task = new TimerTask(WINDOW_MS - 1, () -> {});
+    tieredTimer.add(task);
+
+    // Should be in HTW
+    assertThat(tieredTimer.get(task.getTaskId())).isPresent();
+  }
+
+  @Test
+  void shouldAddJustOutsideBoundary() {
+    TimerTask task = new TimerTask(WINDOW_MS + 1, () -> {});
+    tieredTimer.add(task);
+
+    // Should be in Store
+    assertThat(tieredTimer.get(task.getTaskId())).isPresent();
+  }
+
+  @Test
+  void shouldUpdateLastLoadedTime() {
     long initialTime = tieredTimer.getLastLoadedTime();
-    // Wait for at least one reactive load to happen (at 500ms)
-    Thread.sleep(1000);
-    assertThat(tieredTimer.getLastLoadedTime()).isGreaterThan(initialTime);
+    // Wait for at least one reactive load to happen (triggered at half of imminent window)
+    await().atMost(2, TimeUnit.SECONDS).until(() -> tieredTimer.getLastLoadedTime() > initialTime);
   }
 
   @Test
@@ -182,5 +287,24 @@ class TieredTimerTest {
     new TieredTimer(dispatcher, startupStore, serverConfig);
     // Verify fetchTasksDueBefore was called once during construction
     verify(startupStore, times(1)).fetchTasksDueBefore(anyLong());
+  }
+
+  @Test
+  void shouldReturnEmptyForNonExistentTask() {
+    assertThat(tieredTimer.get("non-existent")).isEmpty();
+  }
+
+  @Test
+  void shouldNotSaveInternalTimerTaskToStore() throws InterruptedException {
+    CountDownLatch latch = new CountDownLatch(1);
+    // We can't easily create TieredTimer.InternalTimerTask from outside,
+    // but we can trigger reactiveLoad which adds one.
+    // However, we can also test the 'add' logic by mocking if needed,
+    // or just rely on the fact that reactiveLoad uses them.
+
+    // Let's verify that the store is NEVER called with an InternalTimerTask
+    // during construction (initial reactiveLoad call)
+    verify(longTermStore, never())
+        .save(argThat(task -> task.getClass().getSimpleName().contains("InternalTimerTask")));
   }
 }

@@ -3,6 +3,7 @@ package io.boomerang.timer;
 import io.boomerang.config.ServerConfig;
 import java.util.Collection;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 import org.slf4j.Logger;
@@ -57,11 +58,25 @@ public class TieredTimer implements Timer {
   private void handleExpiredTask(TimerTask task) {
     if (task instanceof InternalTimerTask) {
       task.getTask().run();
-    } else {
-      // Once a task is successfully dispatched, it can be safely removed from long-term storage.
-      // In a persistent implementation, this ensures we don't re-run it on restart.
-      longTermStore.delete(task);
-      dispatcher.accept(task);
+      return;
+    }
+
+    // Once a task is successfully dispatched, it can be safely removed from long-term storage.
+    // In a persistent implementation, this ensures we don't re-run it on restart.
+    longTermStore.delete(task);
+    dispatcher.accept(task);
+
+    // Automatic rescheduling for repeatable tasks
+    if (task.getRepeatIntervalMs() > 0) {
+      log.debug("Rescheduling repeatable task {}", task.getTaskId());
+      TimerTask nextTask =
+          new TimerTask(
+              task.getTaskId(),
+              task.getRepeatIntervalMs(),
+              task.getPayload(),
+              task.getRepeatIntervalMs(),
+              task.getTask());
+      this.add(nextTask);
     }
   }
 
@@ -100,7 +115,9 @@ public class TieredTimer implements Timer {
     long now = System.currentTimeMillis();
     // Always save to the long-term store first to ensure durability across crashes.
     // If the app crashes while the task is in memory, we can reload it from the store on restart.
-    longTermStore.save(task);
+    if (!(task instanceof InternalTimerTask)) {
+      longTermStore.save(task);
+    }
 
     if (task.getExpirationMs() < now + imminentWindowMs) {
       log.debug("Adding task with expiration {} to imminent timer", task.getExpirationMs());
@@ -110,6 +127,26 @@ public class TieredTimer implements Timer {
           "Adding long-term task with expiration {} to store (already saved)",
           task.getExpirationMs());
     }
+  }
+
+  @Override
+  public void cancel(String taskId) {
+    log.debug("Cancelling task {}", taskId);
+    // Remove from HTW first (if it's there)
+    imminentTimer.cancel(taskId);
+    // Remove from long-term store
+    longTermStore.findById(taskId).ifPresent(longTermStore::delete);
+  }
+
+  @Override
+  public Optional<TimerTask> get(String taskId) {
+    // Check HTW first as it's the most likely place for "imminent" tasks
+    Optional<TimerTask> task = imminentTimer.get(taskId);
+    if (task.isPresent()) {
+      return task;
+    }
+    // Then check long-term store
+    return longTermStore.findById(taskId);
   }
 
   @Override

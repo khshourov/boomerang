@@ -10,7 +10,7 @@ This plan tracks the development of Boomerang, a high-performance, distributed, 
 ## Phase 2: Core Scheduling Engine
 - [x] **Hierarchical Timing Wheel (HTW):** Implement the in-memory O(1) scheduling logic.
 - [x] **Tiered Scheduling Logic:** Implement the "Imminent vs. Long-term" task transition logic (the 30-minute window).
-- [ ] **Basic Task Lifecycle:** CRUD operations for tasks in the memory wheel.
+- [x] **Basic Task Lifecycle:** CRUD operations for tasks in the memory wheel.
 
 ## Phase 3: Persistence & Reliability
 - [ ] **RocksDB Integration:** Implement the time-sorted index for long-term tasks.

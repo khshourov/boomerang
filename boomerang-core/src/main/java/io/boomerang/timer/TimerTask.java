@@ -1,29 +1,63 @@
 package io.boomerang.timer;
 
 import java.util.Objects;
+import java.util.UUID;
 
 /**
  * Represents a task that can be scheduled for execution in the future.
  *
- * <p>A {@code TimerTask} is associated with an expiration time and a {@link Runnable} to execute.
- * It can be cancelled before it expires.
+ * <p>A {@code TimerTask} is associated with an expiration time and an action to perform. It can be
+ * cancelled before it expires.
  *
  * @since 1.0.0
  */
 public class TimerTask {
+  private final String taskId;
   private final long expirationMs;
+  private final byte[] payload;
+  private final long repeatIntervalMs;
   private final Runnable task;
   private volatile TimerEntry timerEntry;
 
   /**
-   * Creates a new timer task with a specified delay.
+   * Creates a new timer task with a specified delay and a {@link Runnable}.
+   *
+   * <p>This constructor is primarily used for internal tasks that don't require a payload or repeat
+   * interval.
    *
    * @param delayMs the delay in milliseconds from now when the task should expire
    * @param task the action to perform when the task expires; must be non-null
    */
   public TimerTask(long delayMs, Runnable task) {
+    this(UUID.randomUUID().toString(), delayMs, null, 0, task);
+  }
+
+  /**
+   * Creates a new timer task with full specification.
+   *
+   * @param taskId the unique identifier for this task; if {@code null}, a UUID will be generated
+   * @param delayMs the delay in milliseconds from now when the task should expire
+   * @param payload the opaque binary payload to be delivered; can be {@code null}
+   * @param repeatIntervalMs the interval in milliseconds for repeated execution; 0 for no
+   *     repetition
+   * @param task the action to perform when the task expires; must be non-null
+   */
+  public TimerTask(
+      String taskId, long delayMs, byte[] payload, long repeatIntervalMs, Runnable task) {
+    this.taskId = taskId != null ? taskId : UUID.randomUUID().toString();
     this.expirationMs = System.currentTimeMillis() + delayMs;
+    this.payload = payload != null ? payload.clone() : null;
+    this.repeatIntervalMs = repeatIntervalMs;
     this.task = Objects.requireNonNull(task, "Task must not be null");
+  }
+
+  /**
+   * Gets the unique identifier for this task.
+   *
+   * @return the task ID
+   */
+  public String getTaskId() {
+    return taskId;
   }
 
   /**
@@ -33,6 +67,24 @@ public class TimerTask {
    */
   public long getExpirationMs() {
     return expirationMs;
+  }
+
+  /**
+   * Gets the opaque binary payload associated with this task.
+   *
+   * @return a clone of the payload, or {@code null} if no payload was provided
+   */
+  public byte[] getPayload() {
+    return payload != null ? payload.clone() : null;
+  }
+
+  /**
+   * Gets the repeat interval for this task.
+   *
+   * @return the repeat interval in milliseconds; 0 if the task is not repeatable
+   */
+  public long getRepeatIntervalMs() {
+    return repeatIntervalMs;
   }
 
   /**
@@ -76,10 +128,30 @@ public class TimerTask {
   @Override
   public String toString() {
     return "TimerTask{"
-        + "expirationMs="
+        + "taskId='"
+        + taskId
+        + '\''
+        + ", expirationMs="
         + expirationMs
+        + ", repeatIntervalMs="
+        + repeatIntervalMs
+        + ", payloadSize="
+        + (payload != null ? payload.length : 0)
         + ", canceled="
         + (timerEntry == null)
         + '}';
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+    TimerTask timerTask = (TimerTask) o;
+    return Objects.equals(taskId, timerTask.taskId);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(taskId);
   }
 }

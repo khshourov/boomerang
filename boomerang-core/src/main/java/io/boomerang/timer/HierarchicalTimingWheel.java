@@ -1,6 +1,9 @@
 package io.boomerang.timer;
 
 import io.boomerang.config.ServerConfig;
+import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.DelayQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -22,6 +25,7 @@ public class HierarchicalTimingWheel implements Timer {
   private final TimingWheel timingWheel;
   private final ExecutorService workerThread;
   private final long advanceClockIntervalMs;
+  private final Map<String, TimerTask> idMap = new ConcurrentHashMap<>();
 
   /**
    * Constructs a hierarchical timing wheel with default configuration.
@@ -81,7 +85,10 @@ public class HierarchicalTimingWheel implements Timer {
   private void addEntry(TimerEntry entry) {
     if (!timingWheel.add(entry)) {
       TimerTask task = entry.getTimerTask();
+      // Only dispatch if not already cancelled and it's not an internal task (internal tasks manage
+      // themselves)
       if (task.getTimerEntry() != null) {
+        idMap.remove(task.getTaskId());
         dispatcher.accept(task);
       }
     }
@@ -89,12 +96,27 @@ public class HierarchicalTimingWheel implements Timer {
 
   @Override
   public void add(TimerTask task) {
+    idMap.put(task.getTaskId(), task);
     addEntry(new TimerEntry(task));
+  }
+
+  @Override
+  public void cancel(String taskId) {
+    TimerTask task = idMap.remove(taskId);
+    if (task != null) {
+      task.cancel();
+    }
+  }
+
+  @Override
+  public Optional<TimerTask> get(String taskId) {
+    return Optional.ofNullable(idMap.get(taskId));
   }
 
   @Override
   public void shutdown() {
     workerThread.shutdownNow();
+    idMap.clear();
   }
 
   @Override

@@ -1,5 +1,7 @@
 package io.boomerang.timer;
 
+import java.util.Optional;
+
 /**
  * Interface for a timer that can schedule tasks for future execution.
  *
@@ -12,6 +14,23 @@ public interface Timer {
    * @param task the task to schedule; must be non-null
    */
   void add(TimerTask task);
+
+  /**
+   * Cancels a previously scheduled task.
+   *
+   * <p>If the task has already fired or does not exist, this method has no effect.
+   *
+   * @param taskId the unique identifier of the task to cancel; must be non-null
+   */
+  void cancel(String taskId);
+
+  /**
+   * Retrieves a task by its unique identifier.
+   *
+   * @param taskId the unique ID of the task to find; must be non-null
+   * @return an {@link Optional} containing the task if found, or empty otherwise
+   */
+  Optional<TimerTask> get(String taskId);
 
   /** Shuts down the timer, releasing any background resources. */
   void shutdown();
