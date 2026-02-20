@@ -5,6 +5,10 @@ import io.boomerang.auth.ClientStore;
 import io.boomerang.auth.RocksDBClientStore;
 import io.boomerang.config.ServerConfig;
 import io.boomerang.session.SessionManager;
+import io.boomerang.timer.LongTermTaskStore;
+import io.boomerang.timer.RocksDBLongTermTaskStore;
+import io.boomerang.timer.TieredTimer;
+import io.boomerang.timer.Timer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -12,7 +16,7 @@ import org.slf4j.LoggerFactory;
  * Bootstraps the Boomerang server by initializing core services and configurations.
  *
  * <p>This class coordinates the startup sequence, including registering the administrative client
- * and setting up auth and session services.
+ * and setting up auth and session services, as well as the task scheduling engine.
  *
  * @since 1.0.0
  */
@@ -22,6 +26,8 @@ public class BoomerangBootstrap {
   private final SessionManager sessionManager;
   private final ServerConfig serverConfig;
   private final ClientStore clientStore;
+  private final LongTermTaskStore taskStore;
+  private final Timer timer;
 
   /**
    * Constructs a bootstrap instance with the provided server configuration.
@@ -33,6 +39,20 @@ public class BoomerangBootstrap {
     this.clientStore = new RocksDBClientStore(serverConfig);
     this.sessionManager = new SessionManager(serverConfig);
     this.authService = new AuthService(clientStore, serverConfig, sessionManager);
+
+    // Initialize task storage and scheduling engine
+    this.taskStore = new RocksDBLongTermTaskStore(serverConfig);
+    this.timer =
+        new TieredTimer(
+            task -> {
+              log.info(
+                  "DISPATCH: Task {} fired. Payload size: {}",
+                  task.getTaskId(),
+                  task.getPayload() != null ? task.getPayload().length : 0);
+              // TODO: Wire into CallbackEngine in Phase 4
+            },
+            taskStore,
+            serverConfig);
   }
 
   /** Starts the Boomerang core services. */
@@ -47,6 +67,12 @@ public class BoomerangBootstrap {
    */
   public void close() throws Exception {
     log.info("Stopping Boomerang core...");
+    if (timer != null) {
+      timer.shutdown();
+    }
+    if (taskStore instanceof AutoCloseable ac) {
+      ac.close();
+    }
     if (clientStore != null) {
       clientStore.close();
     }
@@ -68,5 +94,14 @@ public class BoomerangBootstrap {
    */
   public SessionManager getSessionManager() {
     return sessionManager;
+  }
+
+  /**
+   * Returns the timer engine responsible for task scheduling.
+   *
+   * @return the {@link Timer}
+   */
+  public Timer getTimer() {
+    return timer;
   }
 }
