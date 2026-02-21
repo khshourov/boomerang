@@ -62,7 +62,7 @@ public class HttpCallbackHandler implements CallbackHandler {
       }
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
-      throw new CallbackException("TCP callback connection interrupted", e);
+      throw new CallbackException("HTTP callback connection interrupted", e);
     } catch (IOException e) {
       throw new CallbackException("HTTP callback failed: " + e.getMessage(), e);
     }
