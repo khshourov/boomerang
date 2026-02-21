@@ -28,16 +28,16 @@ This plan tracks the development of Boomerang, a high-performance, distributed, 
     - [x] UDP callback.
 - [x] **Connection Pooling:** Manage efficient reuse of outbound connections.
 
-## Phase 5: Distributed Coordination (etcd)
-- [ ] **Shard Management:** Implement etcd-based shard ownership and leader election.
-- [ ] **Partitioning Logic:** Implement client-side or gateway-level hashing to route tasks to the correct shard.
-- [ ] **Cluster State Sync:** Use etcd to track node health and dynamic shard reassignment.
-
-## Phase 6: Management Tools
+## Phase 5: Management Tools
 - [ ] **CLI Tool (`boomtool`):** Build the picocli application for task management.
 - [ ] **GraalVM Native Image:** Configure the build to produce a standalone CLI binary.
 - [ ] **Web Panel (Frontend):** Develop the React + TypeScript SPA.
 - [ ] **Management API:** Add specialized endpoints to the server to feed the dashboard.
+
+## Phase 6: Distributed Coordination (etcd)
+- [ ] **Shard Management:** Implement etcd-based shard ownership and leader election.
+- [ ] **Partitioning Logic:** Implement client-side or gateway-level hashing to route tasks to the correct shard.
+- [ ] **Cluster State Sync:** Use etcd to track node health and dynamic shard reassignment.
 
 ## Phase 7: Scale & Performance Validation
 - [ ] **Load Testing:** Verify 1 million concurrent tasks and jitter (1-10ms).
