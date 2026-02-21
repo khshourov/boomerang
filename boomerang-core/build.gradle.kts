@@ -12,9 +12,6 @@ dependencies {
     // Persistence
     implementation("org.rocksdb:rocksdbjni:9.1.1")
 
-    // Distributed Coordination
-    implementation("io.etcd:jetcd-core:0.7.7")
-
     // Utilities
     implementation("org.slf4j:slf4j-api:2.0.12")
     implementation("com.github.ben-manes.caffeine:caffeine:3.1.8")

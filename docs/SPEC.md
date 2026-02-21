@@ -2,16 +2,14 @@
 **Status:** Architecture Definition
 
 ## Core Value Proposition
-A high-performance, distributed, and persistent scheduler that accepts binary payloads and fires them back to clients after a set interval. It acts as a massive-scale, durable `setInterval`/`setTimeout` service.
+A high-performance, persistent scheduler that accepts binary payloads and fires them back to clients after a set interval. It acts as a durable `setInterval`/`setTimeout` service.
 
 ## Technical Decisions
-- **Scale:** Support for ~1 million concurrent active tasks.
-- **Architecture:** Partitioned Single Leader (Sharding).
-    - *Rationale:* Ensures strict timer ownership per node via etcd leases.
+- **Performance:** Support for a large number of concurrent active tasks.
+- **Architecture:** Standalone persistent server.
 - **Core Algorithm:** Hierarchical Timing Wheel (HTW) for O(1) execution.
 - **Tech Stack:** 
-    - **Server:** Vanilla Java (Initial implementation) with Netty; future port to Rust.
-    - **Coordination:** **etcd** for leader election and shard membership.
+    - **Server:** Java 21 (LTS) with Netty.
     - **Storage:** **RocksDB** for persistent task indexing and WAL.
     - **Communication:** Protobuf over raw TCP.
 - **Client Strategy:** Multi-language thin SDKs to abstract TCP/Protobuf details.
@@ -22,7 +20,7 @@ A high-performance, distributed, and persistent scheduler that accepts binary pa
     - **Long-term Tasks (e.g., >30m):** Persisted to disk (WAL/Indexed Storage) and loaded into the HTW as their execution window approaches.
 - **Durability:**
     - **WAL (Write-Ahead Log):** Every registration/cancellation is logged to disk before acknowledgment.
-    - **Indexing:** Use a time-sorted index (e.g., RocksDB or a simple B-Tree) for long-term tasks to allow efficient "look-ahead" loading.
+    - **Indexing:** Use a time-sorted index (e.g., RocksDB) for long-term tasks to allow efficient "look-ahead" loading.
 - **Recovery:** On restart, the service rebuilds the HTW by scanning the WAL/Index for all tasks due within the next 30-minute window.
 
 ## Communication & Callback Strategy
@@ -43,11 +41,11 @@ A high-performance, distributed, and persistent scheduler that accepts binary pa
 ## Management & Operations
 - **Web Panel (Dashboard):**
     - **Tech Stack:** Modern SPA (React + TypeScript).
-    - **Functionality:** Centralized UI to manage `ClientConfig`, monitor `Ongoing Tasks`, and inspect/replay `DLQ` items. Visualize shard health, HTW state, and etcd cluster metadata.
+    - **Functionality:** Centralized UI to manage `ClientConfig`, monitor `Ongoing Tasks`, and inspect/replay `DLQ` items. Visualize HTW state and server health.
 - **CLI Tool (`boomtool`):**
     - **Tech Stack:** Java + **picocli** (Targeting GraalVM native-image for a standalone binary).
     - **Commands:** `set`, `update`, `delete`, `show/list`.
-    - **Connection:** Direct Protobuf/TCP communication with server nodes.
+    - **Connection:** Direct Protobuf/TCP communication with the server.
 
 ## Key Workflows
 1. **Auth Handshake:** Client sends `[client_id, password, CallbackConfig, RetryPolicy, DLQPolicy]`.

@@ -1,10 +1,10 @@
 # Boomerang Implementation Plan
 
-This plan tracks the development of Boomerang, a high-performance, distributed, and persistent scheduler.
+This plan tracks the development of Boomerang, a high-performance, persistent scheduler.
 
 ## Phase 1: Foundation & Contract Definition
 - [x] **Define Protobuf Schema:** Create `proto/boomerang.proto` covering task registration, cancellation, and callback configurations.
-- [x] **Project Scaffolding:** Set up a "Vanilla Java" project (Maven/Gradle) with Netty, RocksDB, and etcd client dependencies.
+- [x] **Project Scaffolding:** Set up a "Vanilla Java" project (Maven/Gradle) with Netty and RocksDB client dependencies.
 - [x] **Auth Strategy:** Implement initial client-id/password mechanism and session management.
 
 ## Phase 2: Core Scheduling Engine
@@ -34,13 +34,8 @@ This plan tracks the development of Boomerang, a high-performance, distributed, 
 - [ ] **Web Panel (Frontend):** Develop the React + TypeScript SPA.
 - [ ] **Management API:** Add specialized endpoints to the server to feed the dashboard.
 
-## Phase 6: Distributed Coordination (etcd)
-- [ ] **Shard Management:** Implement etcd-based shard ownership and leader election.
-- [ ] **Partitioning Logic:** Implement client-side or gateway-level hashing to route tasks to the correct shard.
-- [ ] **Cluster State Sync:** Use etcd to track node health and dynamic shard reassignment.
-
-## Phase 7: Scale & Performance Validation
-- [ ] **Load Testing:** Verify 1 million concurrent tasks and jitter (1-10ms).
-- [ ] **Fault Tolerance Testing:** Simulate node failures and verify etcd/RocksDB recovery.
+## Phase 6: Performance & Validation
+- [ ] **Load Testing:** Verify concurrent task processing and timing accuracy.
+- [ ] **Fault Tolerance Testing:** Simulate server restarts and verify RocksDB recovery.
 - [ ] **Metrics & Telemetry:** Finalize Prometheus/Grafana integration.
 - [x] **Mutation Testing:** Configure PITest for Gradle 9/Kotlin DSL compatibility to ensure high test quality.
