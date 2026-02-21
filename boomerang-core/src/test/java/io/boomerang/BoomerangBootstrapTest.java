@@ -4,8 +4,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
 import io.boomerang.config.ServerConfig;
+import io.boomerang.model.CallbackConfig;
 import io.boomerang.model.Session;
 import io.boomerang.timer.TimerTask;
+import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.nio.file.Path;
 import java.util.Base64;
 import java.util.Optional;
@@ -19,10 +22,22 @@ class BoomerangBootstrapTest {
   @TempDir Path tempDir;
   private BoomerangBootstrap bootstrap;
   private ServerConfig serverConfig;
+  private com.sun.net.httpserver.HttpServer mockServer;
+  private int mockServerPort;
   private static final String MASTER_KEY = Base64.getEncoder().encodeToString(new byte[32]);
 
   @BeforeEach
-  void setUp() {
+  void setUp() throws IOException {
+    mockServer = com.sun.net.httpserver.HttpServer.create(new InetSocketAddress(0), 0);
+    mockServer.createContext(
+        "/callback",
+        exchange -> {
+          exchange.sendResponseHeaders(200, -1);
+          exchange.close();
+        });
+    mockServer.start();
+    mockServerPort = mockServer.getAddress().getPort();
+
     System.setProperty("BOOMERANG_MASTER_KEY", MASTER_KEY);
     System.setProperty("rocksdb.client.path", tempDir.resolve("clients").toString());
     System.setProperty("rocksdb.path", tempDir.resolve("rocksdb").toString());
@@ -37,6 +52,9 @@ class BoomerangBootstrapTest {
 
   @AfterEach
   void tearDown() throws Exception {
+    if (mockServer != null) {
+      mockServer.stop(0);
+    }
     if (bootstrap != null) {
       bootstrap.close();
     }
@@ -68,8 +86,22 @@ class BoomerangBootstrapTest {
   @Test
   void shouldRecoverTasksOnRestart() throws Exception {
     String taskId = "recover-me";
+    String clientId = "admin";
+
+    // Ensure the client has a callback config so dispatching doesn't fail
+    bootstrap
+        .getAuthService()
+        .registerClient(
+            clientId,
+            serverConfig.getAdminPassword(),
+            true,
+            new CallbackConfig(
+                CallbackConfig.Protocol.HTTP, "http://localhost:" + mockServerPort + "/callback"),
+            null,
+            null);
+
     // 1. Create a task that expires soon
-    TimerTask task = new TimerTask(taskId, "admin", 500, null, 0, () -> {});
+    TimerTask task = new TimerTask(taskId, clientId, 500, null, 0, () -> {});
     bootstrap.getTimer().add(task);
 
     // 2. Shut down the bootstrap

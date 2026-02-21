@@ -5,6 +5,12 @@ import io.boomerang.auth.ClientStore;
 import io.boomerang.auth.RocksDBClientStore;
 import io.boomerang.config.ServerConfig;
 import io.boomerang.server.BoomerangServer;
+import io.boomerang.server.callback.CallbackDispatcher;
+import io.boomerang.server.callback.DefaultCallbackDispatcher;
+import io.boomerang.server.callback.GrpcCallbackHandler;
+import io.boomerang.server.callback.HttpCallbackHandler;
+import io.boomerang.server.callback.TcpCallbackHandler;
+import io.boomerang.server.callback.UdpCallbackHandler;
 import io.boomerang.session.SessionManager;
 import io.boomerang.timer.DLQStore;
 import io.boomerang.timer.DefaultRetryEngine;
@@ -15,6 +21,8 @@ import io.boomerang.timer.RocksDBLongTermTaskStore;
 import io.boomerang.timer.TieredTimer;
 import io.boomerang.timer.Timer;
 import io.boomerang.timer.TimerTask;
+import java.time.Duration;
+import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,6 +43,7 @@ public class BoomerangBootstrap {
   private final LongTermTaskStore taskStore;
   private final DLQStore dlqStore;
   private final RetryEngine retryEngine;
+  private final CallbackDispatcher callbackDispatcher;
   private final Timer timer;
   private final BoomerangServer server;
 
@@ -53,6 +62,16 @@ public class BoomerangBootstrap {
     this.taskStore = new RocksDBLongTermTaskStore(serverConfig);
     this.dlqStore = new RocksDBDLQStore(serverConfig);
 
+    // Initialize callback engine
+    this.callbackDispatcher =
+        new DefaultCallbackDispatcher(
+            clientStore,
+            List.of(
+                new TcpCallbackHandler(serverConfig.getCallbackTcpTimeoutMs()),
+                new HttpCallbackHandler(Duration.ofMillis(serverConfig.getCallbackHttpTimeoutMs())),
+                new UdpCallbackHandler(),
+                new GrpcCallbackHandler(serverConfig.getCallbackGrpcTimeoutMs())));
+
     // The retry engine needs to reschedule tasks using the timer
     this.retryEngine = new DefaultRetryEngine(clientStore, taskStore, dlqStore, this::resubmitTask);
 
@@ -60,11 +79,8 @@ public class BoomerangBootstrap {
         new TieredTimer(
             task -> {
               try {
-                log.info(
-                    "DISPATCH: Task {} fired. Payload size: {}",
-                    task.getTaskId(),
-                    task.getPayload() != null ? task.getPayload().length : 0);
-                // TODO: Wire into CallbackEngine in Phase 4
+                // Dispatch the task to the registered callback endpoint
+                callbackDispatcher.dispatch(task);
 
                 // Task successfully dispatched (or handled by external engine)
                 taskStore.delete(task);
@@ -113,6 +129,9 @@ public class BoomerangBootstrap {
     }
     if (timer != null) {
       timer.shutdown();
+    }
+    if (callbackDispatcher != null) {
+      callbackDispatcher.shutdown();
     }
     if (taskStore instanceof AutoCloseable ac) {
       ac.close();

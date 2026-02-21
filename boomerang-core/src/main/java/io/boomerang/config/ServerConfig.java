@@ -212,4 +212,31 @@ public class ServerConfig {
             "netty.business.threads",
             String.valueOf(Math.max(1, Runtime.getRuntime().availableProcessors() * 2))));
   }
+
+  /**
+   * Gets the timeout for TCP callbacks.
+   *
+   * @return the TCP callback timeout in milliseconds
+   */
+  public long getCallbackTcpTimeoutMs() {
+    return Long.parseLong(getProperty("callback.tcp.timeout.ms", "1000"));
+  }
+
+  /**
+   * Gets the timeout for HTTP callbacks.
+   *
+   * @return the HTTP callback timeout in milliseconds
+   */
+  public long getCallbackHttpTimeoutMs() {
+    return Long.parseLong(getProperty("callback.http.timeout.ms", "2000"));
+  }
+
+  /**
+   * Gets the timeout for gRPC callbacks.
+   *
+   * @return the gRPC callback timeout in milliseconds
+   */
+  public long getCallbackGrpcTimeoutMs() {
+    return Long.parseLong(getProperty("callback.grpc.timeout.ms", "3000"));
+  }
 }

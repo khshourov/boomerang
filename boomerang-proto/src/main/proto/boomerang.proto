@@ -22,6 +22,8 @@ message BoomerangEnvelope {
         ClientRegistrationResponse client_registration_response = 11;
         ClientDeregistrationRequest client_deregistration = 12;
         ClientDeregistrationResponse client_deregistration_response = 13;
+        CallbackRequest callback_request = 14;
+        CallbackResponse callback_response = 15;
     }
 }
 
@@ -119,6 +121,24 @@ message SessionRefreshRequest {}
 message SessionRefreshResponse {
     Status status = 1;
     uint64 new_expires_at_ms = 2;
+}
+
+// Service implemented by clients to receive callbacks via gRPC.
+service BoomerangCallback {
+    // Fired when a task expires and needs to be delivered to the client.
+    rpc OnTaskExpired(CallbackRequest) returns (CallbackResponse);
+}
+
+// Request sent to the client's gRPC endpoint when a task expires.
+message CallbackRequest {
+    string task_id = 1;               // The unique identifier for the expired task
+    bytes payload = 2;                // The original binary payload registered with the task
+}
+
+// Response from the client acknowledging receipt of the callback.
+message CallbackResponse {
+    Status status = 1;                // Acknowledgement status
+    string error_message = 2;         // Descriptive error if status is not OK
 }
 
 enum Status {

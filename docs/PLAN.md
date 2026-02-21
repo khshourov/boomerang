@@ -21,11 +21,11 @@ This plan tracks the development of Boomerang, a high-performance, distributed, 
 
 ## Phase 4: Networking & Callback Engine
 - [x] **Inbound TCP Server:** Implement the Netty-based Protobuf/TCP server for task registration.
-- [ ] **Outbound Callback Dispatcher:**
-    - [ ] Raw TCP/Protobuf callback.
-    - [ ] gRPC callback.
-    - [ ] HTTP/Webhook callback.
-    - [ ] UDP callback.
+- [x] **Outbound Callback Dispatcher:**
+    - [x] Raw TCP/Protobuf callback.
+    - [x] gRPC callback.
+    - [x] HTTP/Webhook callback.
+    - [x] UDP callback.
 - [ ] **Connection Pooling:** Manage efficient reuse of outbound connections.
 
 ## Phase 5: Distributed Coordination (etcd)
