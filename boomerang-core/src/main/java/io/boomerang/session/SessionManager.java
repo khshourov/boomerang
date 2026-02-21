@@ -99,6 +99,29 @@ public class SessionManager {
   }
 
   /**
+   * Checks if a session is valid and not expired.
+   *
+   * @param sessionId the session identifier; can be {@code null}
+   * @return {@code true} if the session is valid, {@code false} otherwise
+   */
+  public boolean isValid(String sessionId) {
+    if (sessionId == null) return false;
+    Session session = sessions.get(sessionId);
+    return session != null && !session.isExpired();
+  }
+
+  /**
+   * Gets the client ID associated with the given session ID.
+   *
+   * @param sessionId the session identifier; must be non-null
+   * @return the client ID, or {@code null} if the session is invalid
+   */
+  public String getClientId(String sessionId) {
+    Session session = sessions.get(sessionId);
+    return (session != null && !session.isExpired()) ? session.clientId() : null;
+  }
+
+  /**
    * Explicitly invalidates and removes a session.
    *
    * @param sessionId the identifier of the session to invalidate; must be non-null

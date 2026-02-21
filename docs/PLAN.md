@@ -20,7 +20,7 @@ This plan tracks the development of Boomerang, a high-performance, distributed, 
 - [x] **Retry Engine & DLQ:** Implement the retry loop logic and persistent Dead Letter Queue.
 
 ## Phase 4: Networking & Callback Engine
-- [ ] **Inbound TCP Server:** Implement the Netty-based Protobuf/TCP server for task registration.
+- [x] **Inbound TCP Server:** Implement the Netty-based Protobuf/TCP server for task registration.
 - [ ] **Outbound Callback Dispatcher:**
     - [ ] Raw TCP/Protobuf callback.
     - [ ] gRPC callback.

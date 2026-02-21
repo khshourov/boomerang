@@ -173,4 +173,43 @@ public class ServerConfig {
     }
     return key;
   }
+
+  /**
+   * Gets the TCP server port.
+   *
+   * @return the server port
+   */
+  public int getServerPort() {
+    return Integer.parseInt(getProperty("server.port", "9973"));
+  }
+
+  /**
+   * Gets the number of threads for the Netty boss event loop group.
+   *
+   * @return the number of boss threads
+   */
+  public int getNettyBossThreads() {
+    return Integer.parseInt(getProperty("netty.boss.threads", "1"));
+  }
+
+  /**
+   * Gets the number of threads for the Netty worker event loop group.
+   *
+   * @return the number of worker threads
+   */
+  public int getNettyWorkerThreads() {
+    return Integer.parseInt(getProperty("netty.worker.threads", "0"));
+  }
+
+  /**
+   * Gets the number of threads for the business logic thread pool.
+   *
+   * @return the number of business threads
+   */
+  public int getNettyBusinessThreads() {
+    return Integer.parseInt(
+        getProperty(
+            "netty.business.threads",
+            String.valueOf(Math.max(1, Runtime.getRuntime().availableProcessors() * 2))));
+  }
 }

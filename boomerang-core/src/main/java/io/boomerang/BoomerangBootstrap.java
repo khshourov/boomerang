@@ -4,6 +4,7 @@ import io.boomerang.auth.AuthService;
 import io.boomerang.auth.ClientStore;
 import io.boomerang.auth.RocksDBClientStore;
 import io.boomerang.config.ServerConfig;
+import io.boomerang.server.BoomerangServer;
 import io.boomerang.session.SessionManager;
 import io.boomerang.timer.DLQStore;
 import io.boomerang.timer.DefaultRetryEngine;
@@ -35,6 +36,7 @@ public class BoomerangBootstrap {
   private final DLQStore dlqStore;
   private final RetryEngine retryEngine;
   private final Timer timer;
+  private final BoomerangServer server;
 
   /**
    * Constructs a bootstrap instance with the provided server configuration.
@@ -78,6 +80,8 @@ public class BoomerangBootstrap {
             },
             taskStore,
             serverConfig);
+
+    this.server = new BoomerangServer(serverConfig, authService, sessionManager, timer);
   }
 
   private void resubmitTask(TimerTask task) {
@@ -89,6 +93,12 @@ public class BoomerangBootstrap {
   /** Starts the Boomerang core services. */
   public void start() {
     log.info("Starting Boomerang core...");
+    try {
+      server.start();
+    } catch (InterruptedException e) {
+      log.error("Failed to start Boomerang server", e);
+      Thread.currentThread().interrupt();
+    }
   }
 
   /**
@@ -98,6 +108,9 @@ public class BoomerangBootstrap {
    */
   public void close() throws Exception {
     log.info("Stopping Boomerang core...");
+    if (server != null) {
+      server.stop();
+    }
     if (timer != null) {
       timer.shutdown();
     }

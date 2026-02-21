@@ -166,6 +166,26 @@ public class AuthService {
   }
 
   /**
+   * Checks if the given client has administrative privileges.
+   *
+   * @param clientId the identifier of the client to check; must be non-null
+   * @return {@code true} if the client is an admin, {@code false} otherwise
+   */
+  public boolean isAdmin(String clientId) {
+    return getClient(clientId).map(Client::isAdmin).orElse(false);
+  }
+
+  /**
+   * Deregisters a client.
+   *
+   * @param targetClientId the unique identifier for the client to remove; must be non-null
+   */
+  public void deregisterClient(String targetClientId) {
+    clientStore.delete(targetClientId);
+    log.info("Client {} deregistered", targetClientId);
+  }
+
+  /**
    * Retrieves a client by their identifier.
    *
    * @param clientId the unique identifier for the client; must be non-null

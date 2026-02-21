@@ -106,4 +106,23 @@ class AuthServiceTest {
     assertThat(success).isFalse();
     assertThat(authService.getClient("target")).isPresent();
   }
+
+  @Test
+  void shouldVerifyAdminStatus() {
+    authService.registerClient("admin", "pass", true, null, null, null);
+    authService.registerClient("user", "pass", false, null, null, null);
+
+    assertThat(authService.isAdmin("admin")).isTrue();
+    assertThat(authService.isAdmin("user")).isFalse();
+    assertThat(authService.isAdmin("unknown")).isFalse();
+  }
+
+  @Test
+  void shouldDeregisterClient() {
+    authService.registerClient("target", "pass", false, null, null, null);
+    assertThat(authService.getClient("target")).isPresent();
+
+    authService.deregisterClient("target");
+    assertThat(authService.getClient("target")).isEmpty();
+  }
 }

@@ -87,4 +87,21 @@ class SessionManagerTest {
     Optional<Session> retrievedSession = sessionManager.getSession(session.sessionId());
     assertThat(retrievedSession).isEmpty();
   }
+
+  @Test
+  void shouldValidateSession() {
+    Session session = sessionManager.createSession("client-1", null, null, null);
+
+    assertThat(sessionManager.isValid(session.sessionId())).isTrue();
+    assertThat(sessionManager.isValid("non-existent")).isFalse();
+    assertThat(sessionManager.isValid(null)).isFalse();
+  }
+
+  @Test
+  void shouldGetClientId() {
+    Session session = sessionManager.createSession("client-1", null, null, null);
+
+    assertThat(sessionManager.getClientId(session.sessionId())).isEqualTo("client-1");
+    assertThat(sessionManager.getClientId("non-existent")).isNull();
+  }
 }
