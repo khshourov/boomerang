@@ -23,6 +23,9 @@ import io.boomerang.timer.Timer;
 import io.boomerang.timer.TimerTask;
 import java.time.Duration;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -46,6 +49,7 @@ public class BoomerangBootstrap {
   private final CallbackDispatcher callbackDispatcher;
   private final Timer timer;
   private final BoomerangServer server;
+  private final ExecutorService callbackExecutor;
 
   /**
    * Constructs a bootstrap instance with the provided server configuration.
@@ -61,6 +65,15 @@ public class BoomerangBootstrap {
     // Initialize task storage and scheduling engine
     this.taskStore = new RocksDBLongTermTaskStore(serverConfig);
     this.dlqStore = new RocksDBDLQStore(serverConfig);
+
+    this.callbackExecutor =
+        Executors.newFixedThreadPool(
+            serverConfig.getCallbackThreads(),
+            r -> {
+              Thread t = new Thread(r, "callback-executor");
+              t.setDaemon(true);
+              return t;
+            });
 
     // Initialize callback engine
     this.callbackDispatcher =
@@ -82,23 +95,26 @@ public class BoomerangBootstrap {
 
     this.timer =
         new TieredTimer(
-            task -> {
-              try {
-                // Dispatch the task to the registered callback endpoint
-                callbackDispatcher.dispatch(task);
+            task ->
+                callbackExecutor.submit(
+                    () -> {
+                      try {
+                        // Dispatch the task to the registered callback endpoint
+                        callbackDispatcher.dispatch(task);
 
-                // Task successfully dispatched (or handled by external engine)
-                taskStore.delete(task);
+                        // Task successfully dispatched (or handled by external engine)
+                        taskStore.delete(task);
 
-                // Automatic rescheduling for repeatable tasks only on SUCCESSFUL dispatch.
-                if (task.getRepeatIntervalMs() > 0) {
-                  resubmitTask(task.nextCycle());
-                }
-              } catch (Exception e) {
-                log.error("Failed to dispatch task {}: {}", task.getTaskId(), e.getMessage());
-                retryEngine.handleFailure(task, e);
-              }
-            },
+                        // Automatic rescheduling for repeatable tasks only on SUCCESSFUL dispatch.
+                        if (task.getRepeatIntervalMs() > 0) {
+                          resubmitTask(task.nextCycle());
+                        }
+                      } catch (Exception e) {
+                        log.error(
+                            "Failed to dispatch task {}: {}", task.getTaskId(), e.getMessage());
+                        retryEngine.handleFailure(task, e);
+                      }
+                    }),
             taskStore,
             serverConfig);
 
@@ -129,15 +145,30 @@ public class BoomerangBootstrap {
    */
   public void close() throws Exception {
     log.info("Stopping Boomerang core...");
+    // 1. Stop accepting new inbound tasks
     if (server != null) {
       server.stop();
     }
+
+    // 2. Stop the timer to prevent new tasks from firing
     if (timer != null) {
       timer.shutdown();
     }
+
+    // 3. Shut down the callback executor to finish pending callbacks
+    if (callbackExecutor != null) {
+      callbackExecutor.shutdown();
+      if (!callbackExecutor.awaitTermination(5, TimeUnit.SECONDS)) {
+        callbackExecutor.shutdownNow();
+      }
+    }
+
+    // 4. Shut down protocol-specific handlers (e.g., connection pools)
     if (callbackDispatcher != null) {
       callbackDispatcher.shutdown();
     }
+
+    // 5. Close persistent stores
     if (taskStore instanceof AutoCloseable ac) {
       ac.close();
     }

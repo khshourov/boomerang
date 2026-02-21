@@ -31,13 +31,18 @@ public class GrpcCallbackHandler implements CallbackHandler {
   private final long timeoutMs;
 
   /**
-   * Constructs a new handler with a shared channel pool.
+   * Constructs a new handler with a shared channel pool and a custom eviction listener.
    *
    * @param timeoutMs the maximum time to wait for a gRPC response
    * @param maxChannels maximum number of channels to keep in the pool
    * @param idleTimeoutMs idle time before a channel is evicted
+   * @param onEvict listener called when a channel is evicted; can be {@code null}
    */
-  public GrpcCallbackHandler(long timeoutMs, int maxChannels, long idleTimeoutMs) {
+  public GrpcCallbackHandler(
+      long timeoutMs,
+      int maxChannels,
+      long idleTimeoutMs,
+      java.util.function.Consumer<String> onEvict) {
     this.timeoutMs = timeoutMs;
     this.channelPool =
         Caffeine.newBuilder()
@@ -46,6 +51,9 @@ public class GrpcCallbackHandler implements CallbackHandler {
             .removalListener(
                 (String endpoint, ManagedChannel channel, RemovalCause cause) -> {
                   log.info("Closing gRPC channel for endpoint {} due to {}", endpoint, cause);
+                  if (onEvict != null) {
+                    onEvict.accept(endpoint);
+                  }
                   if (channel != null) {
                     try {
                       channel.shutdown().awaitTermination(5, TimeUnit.SECONDS);
@@ -56,6 +64,17 @@ public class GrpcCallbackHandler implements CallbackHandler {
                   }
                 })
             .build();
+  }
+
+  /**
+   * Constructs a new handler with a shared channel pool.
+   *
+   * @param timeoutMs the maximum time to wait for a gRPC response
+   * @param maxChannels maximum number of channels to keep in the pool
+   * @param idleTimeoutMs idle time before a channel is evicted
+   */
+  public GrpcCallbackHandler(long timeoutMs, int maxChannels, long idleTimeoutMs) {
+    this(timeoutMs, maxChannels, idleTimeoutMs, null);
   }
 
   @Override
@@ -109,6 +128,15 @@ public class GrpcCallbackHandler implements CallbackHandler {
   public void shutdown() {
     log.info("Shutting down gRPC channel pool...");
     channelPool.invalidateAll();
+    channelPool.cleanUp();
+  }
+
+  /**
+   * Performs any pending maintenance operations needed by the cache.
+   *
+   * <p>Used primarily for testing eviction logic.
+   */
+  void cleanUp() {
     channelPool.cleanUp();
   }
 }

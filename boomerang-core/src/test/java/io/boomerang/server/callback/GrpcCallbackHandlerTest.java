@@ -1,7 +1,9 @@
 package io.boomerang.server.callback;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.awaitility.Awaitility.await;
 
 import io.boomerang.model.CallbackConfig;
 import io.boomerang.proto.BoomerangCallbackGrpc;
@@ -13,7 +15,9 @@ import io.grpc.Server;
 import io.grpc.ServerBuilder;
 import io.grpc.stub.StreamObserver;
 import java.io.IOException;
+import java.time.Duration;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -24,6 +28,7 @@ class GrpcCallbackHandlerTest {
   private GrpcCallbackHandler handler;
   private String serverEndpoint;
   private volatile Status serverStatus = Status.OK;
+  private final AtomicInteger evictionCount = new AtomicInteger(0);
 
   @BeforeEach
   void setUp() throws IOException {
@@ -32,8 +37,7 @@ class GrpcCallbackHandlerTest {
 
     int port = server.getPort();
     serverEndpoint = "localhost:" + port;
-
-    handler = new GrpcCallbackHandler(2000, 10, 60000);
+    evictionCount.set(0);
   }
 
   @AfterEach
@@ -46,6 +50,7 @@ class GrpcCallbackHandlerTest {
 
   @Test
   void shouldDeliverSuccessfully() {
+    handler = new GrpcCallbackHandler(2000, 10, 60000);
     serverStatus = Status.OK;
     TimerTask task = new TimerTask("task-1", "client-1", 100, "hello".getBytes(), 0, () -> {});
     CallbackConfig config = new CallbackConfig(CallbackConfig.Protocol.GRPC, serverEndpoint);
@@ -54,7 +59,30 @@ class GrpcCallbackHandlerTest {
   }
 
   @Test
+  void shouldEvictIdleChannels() throws CallbackException {
+    // 500ms idle timeout
+    handler = new GrpcCallbackHandler(2000, 10, 500, endpoint -> evictionCount.incrementAndGet());
+
+    TimerTask task = new TimerTask("task-1", "client-1", 100, "hello".getBytes(), 0, () -> {});
+    CallbackConfig config = new CallbackConfig(CallbackConfig.Protocol.GRPC, serverEndpoint);
+
+    handler.handle(task, config);
+    assertThat(evictionCount.get()).isZero();
+
+    // Wait for idle timeout and verify eviction
+    await()
+        .atMost(Duration.ofSeconds(2))
+        .pollDelay(Duration.ofMillis(600))
+        .untilAsserted(
+            () -> {
+              handler.cleanUp();
+              assertThat(evictionCount.get()).isEqualTo(1);
+            });
+  }
+
+  @Test
   void shouldThrowWhenStatusIsNotOk() {
+    handler = new GrpcCallbackHandler(2000, 10, 60000);
     serverStatus = Status.ERROR;
     TimerTask task = new TimerTask("task-1", "client-1", 100, "hello".getBytes(), 0, () -> {});
     CallbackConfig config = new CallbackConfig(CallbackConfig.Protocol.GRPC, serverEndpoint);

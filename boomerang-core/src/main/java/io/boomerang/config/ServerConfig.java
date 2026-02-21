@@ -214,6 +214,18 @@ public class ServerConfig {
   }
 
   /**
+   * Gets the number of threads for the callback execution pool.
+   *
+   * @return the number of callback threads
+   */
+  public int getCallbackThreads() {
+    return Integer.parseInt(
+        getProperty(
+            "callback.threads",
+            String.valueOf(Math.max(1, Runtime.getRuntime().availableProcessors() * 4))));
+  }
+
+  /**
    * Gets the timeout for TCP callbacks.
    *
    * @return the TCP callback timeout in milliseconds
