@@ -33,7 +33,7 @@ class GrpcCallbackHandlerTest {
     int port = server.getPort();
     serverEndpoint = "localhost:" + port;
 
-    handler = new GrpcCallbackHandler(2000);
+    handler = new GrpcCallbackHandler(2000, 10, 60000);
   }
 
   @AfterEach

@@ -239,4 +239,31 @@ public class ServerConfig {
   public long getCallbackGrpcTimeoutMs() {
     return Long.parseLong(getProperty("callback.grpc.timeout.ms", "3000"));
   }
+
+  /**
+   * Gets the maximum number of concurrent connections per endpoint for TCP callbacks.
+   *
+   * @return the maximum TCP connections per endpoint
+   */
+  public int getCallbackTcpPoolMaxConnections() {
+    return Integer.parseInt(getProperty("callback.tcp.pool.max.connections", "50"));
+  }
+
+  /**
+   * Gets the maximum number of cached gRPC channels.
+   *
+   * @return the maximum gRPC channels
+   */
+  public int getCallbackGrpcPoolMaxChannels() {
+    return Integer.parseInt(getProperty("callback.grpc.pool.max.channels", "100"));
+  }
+
+  /**
+   * Gets the idle timeout for gRPC channels.
+   *
+   * @return the gRPC idle timeout in milliseconds
+   */
+  public long getCallbackGrpcIdleTimeoutMs() {
+    return Long.parseLong(getProperty("callback.grpc.idle.timeout.ms", "60000"));
+  }
 }

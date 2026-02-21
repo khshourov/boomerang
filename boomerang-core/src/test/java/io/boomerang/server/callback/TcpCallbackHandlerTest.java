@@ -1,5 +1,6 @@
 package io.boomerang.server.callback;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -21,6 +22,7 @@ import io.netty.handler.codec.LengthFieldPrepender;
 import io.netty.handler.codec.protobuf.ProtobufDecoder;
 import io.netty.handler.codec.protobuf.ProtobufEncoder;
 import java.net.InetSocketAddress;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -32,11 +34,13 @@ class TcpCallbackHandlerTest {
   private TcpCallbackHandler handler;
   private int port;
   private volatile Status serverResponseStatus = Status.OK;
+  private final AtomicInteger connectionCount = new AtomicInteger(0);
 
   @BeforeEach
   void setUp() throws InterruptedException {
     bossGroup = new NioEventLoopGroup(1);
     workerGroup = new NioEventLoopGroup(1);
+    connectionCount.set(0);
 
     ServerBootstrap b = new ServerBootstrap();
     b.group(bossGroup, workerGroup)
@@ -45,6 +49,7 @@ class TcpCallbackHandlerTest {
             new ChannelInitializer<SocketChannel>() {
               @Override
               public void initChannel(SocketChannel ch) {
+                connectionCount.incrementAndGet();
                 ch.pipeline().addLast(new LengthFieldBasedFrameDecoder(1048576, 0, 4, 0, 4));
                 ch.pipeline().addLast(new LengthFieldPrepender(4));
                 ch.pipeline().addLast(new ProtobufDecoder(BoomerangEnvelope.getDefaultInstance()));
@@ -58,7 +63,7 @@ class TcpCallbackHandlerTest {
             ? addr.getPort()
             : 0;
 
-    handler = new TcpCallbackHandler(2000);
+    handler = new TcpCallbackHandler(2000, 10);
   }
 
   @AfterEach
@@ -75,6 +80,19 @@ class TcpCallbackHandlerTest {
     CallbackConfig config = new CallbackConfig(CallbackConfig.Protocol.TCP, "localhost:" + port);
 
     assertThatCode(() -> handler.handle(task, config)).doesNotThrowAnyException();
+  }
+
+  @Test
+  void shouldReuseConnection() throws CallbackException {
+    serverResponseStatus = Status.OK;
+    TimerTask task1 = new TimerTask("task-1", "client-1", 100, "hello".getBytes(), 0, () -> {});
+    TimerTask task2 = new TimerTask("task-2", "client-1", 100, "world".getBytes(), 0, () -> {});
+    CallbackConfig config = new CallbackConfig(CallbackConfig.Protocol.TCP, "localhost:" + port);
+
+    handler.handle(task1, config);
+    handler.handle(task2, config);
+
+    assertThat(connectionCount.get()).isEqualTo(1);
   }
 
   @Test

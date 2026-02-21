@@ -26,7 +26,7 @@ This plan tracks the development of Boomerang, a high-performance, distributed, 
     - [x] gRPC callback.
     - [x] HTTP/Webhook callback.
     - [x] UDP callback.
-- [ ] **Connection Pooling:** Manage efficient reuse of outbound connections.
+- [x] **Connection Pooling:** Manage efficient reuse of outbound connections.
 
 ## Phase 5: Distributed Coordination (etcd)
 - [ ] **Shard Management:** Implement etcd-based shard ownership and leader election.

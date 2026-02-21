@@ -67,10 +67,15 @@ public class BoomerangBootstrap {
         new DefaultCallbackDispatcher(
             clientStore,
             List.of(
-                new TcpCallbackHandler(serverConfig.getCallbackTcpTimeoutMs()),
+                new TcpCallbackHandler(
+                    serverConfig.getCallbackTcpTimeoutMs(),
+                    serverConfig.getCallbackTcpPoolMaxConnections()),
                 new HttpCallbackHandler(Duration.ofMillis(serverConfig.getCallbackHttpTimeoutMs())),
                 new UdpCallbackHandler(),
-                new GrpcCallbackHandler(serverConfig.getCallbackGrpcTimeoutMs())));
+                new GrpcCallbackHandler(
+                    serverConfig.getCallbackGrpcTimeoutMs(),
+                    serverConfig.getCallbackGrpcPoolMaxChannels(),
+                    serverConfig.getCallbackGrpcIdleTimeoutMs())));
 
     // The retry engine needs to reschedule tasks using the timer
     this.retryEngine = new DefaultRetryEngine(clientStore, taskStore, dlqStore, this::resubmitTask);
