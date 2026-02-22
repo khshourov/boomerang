@@ -51,9 +51,138 @@ public class BoomerangServerHandler extends SimpleChannelInboundHandler<Boomeran
       case SESSION_REFRESH -> handleSessionRefresh(ctx, envelope);
       case CLIENT_REGISTRATION -> handleClientRegistration(ctx, envelope);
       case CLIENT_DEREGISTRATION -> handleClientDeregistration(ctx, envelope);
+      case LIST_TASKS_REQUEST -> handleListTasks(ctx, envelope);
+      case GET_TASK_REQUEST -> handleGetTask(ctx, envelope);
       default -> {
         log.warn("Unsupported payload type: {}", envelope.getPayloadCase());
       }
+    }
+  }
+
+  private void handleListTasks(ChannelHandlerContext ctx, BoomerangEnvelope envelope) {
+    String sessionId = envelope.getSessionId();
+    if (!sessionManager.isValid(sessionId)) {
+      ctx.writeAndFlush(
+          BoomerangEnvelope.newBuilder()
+              .setListTasksResponse(
+                  io.boomerang.proto.ListTasksResponse.newBuilder()
+                      .setStatus(Status.UNAUTHORIZED)
+                      .setErrorMessage("Invalid or expired session")
+                      .build())
+              .build());
+      return;
+    }
+
+    String callerClientId = sessionManager.getClientId(sessionId);
+    boolean isAdmin = authService.isAdmin(callerClientId);
+
+    var request = envelope.getListTasksRequest();
+    String targetClientId = request.getClientId();
+
+    // Security check: regular clients can only list their own tasks.
+    if (!isAdmin) {
+      if (!targetClientId.isEmpty() && !targetClientId.equals(callerClientId)) {
+        ctx.writeAndFlush(
+            BoomerangEnvelope.newBuilder()
+                .setListTasksResponse(
+                    io.boomerang.proto.ListTasksResponse.newBuilder()
+                        .setStatus(Status.UNAUTHORIZED)
+                        .setErrorMessage("Cannot list tasks for other clients")
+                        .build())
+                .build());
+        return;
+      }
+      targetClientId = callerClientId;
+    } else if (targetClientId.isEmpty()) {
+      // Admins list all tasks if no client ID is specified.
+      targetClientId = null;
+    }
+
+    long scheduledAfter = request.getScheduledAfter();
+    long scheduledBefore =
+        request.getScheduledBefore() > 0 ? request.getScheduledBefore() : Long.MAX_VALUE;
+    Boolean isRecurring = request.hasIsRecurring() ? request.getIsRecurring() : null;
+    int limit = request.getLimit() > 0 ? Math.min(request.getLimit(), 1000) : 100;
+    String nextToken = request.getNextToken();
+
+    try {
+      var result =
+          timer.list(
+              targetClientId, scheduledAfter, scheduledBefore, isRecurring, limit, nextToken);
+
+      var responseBuilder = io.boomerang.proto.ListTasksResponse.newBuilder().setStatus(Status.OK);
+      result.items().forEach(task -> responseBuilder.addTasks(ModelMapper.map(task)));
+      if (result.nextToken() != null) {
+        responseBuilder.setNextToken(result.nextToken());
+      }
+
+      ctx.writeAndFlush(
+          BoomerangEnvelope.newBuilder().setListTasksResponse(responseBuilder.build()).build());
+    } catch (Exception e) {
+      log.error("Failed to list tasks: {}", e.getMessage(), e);
+      ctx.writeAndFlush(
+          BoomerangEnvelope.newBuilder()
+              .setListTasksResponse(
+                  io.boomerang.proto.ListTasksResponse.newBuilder()
+                      .setStatus(Status.ERROR)
+                      .setErrorMessage(e.getMessage())
+                      .build())
+              .build());
+    }
+  }
+
+  private void handleGetTask(ChannelHandlerContext ctx, BoomerangEnvelope envelope) {
+    String sessionId = envelope.getSessionId();
+    if (!sessionManager.isValid(sessionId)) {
+      ctx.writeAndFlush(
+          BoomerangEnvelope.newBuilder()
+              .setGetTaskResponse(
+                  io.boomerang.proto.GetTaskResponse.newBuilder()
+                      .setStatus(Status.UNAUTHORIZED)
+                      .setErrorMessage("Invalid or expired session")
+                      .build())
+              .build());
+      return;
+    }
+
+    String callerClientId = sessionManager.getClientId(sessionId);
+    boolean isAdmin = authService.isAdmin(callerClientId);
+
+    var request = envelope.getGetTaskRequest();
+    var taskOpt = timer.get(request.getTaskId());
+
+    if (taskOpt.isPresent()) {
+      var task = taskOpt.get();
+      // Security check: regular clients can only see their own tasks.
+      if (!isAdmin && !task.getClientId().equals(callerClientId)) {
+        ctx.writeAndFlush(
+            BoomerangEnvelope.newBuilder()
+                .setGetTaskResponse(
+                    io.boomerang.proto.GetTaskResponse.newBuilder()
+                        .setStatus(Status.UNAUTHORIZED)
+                        .setErrorMessage("Access denied to task")
+                        .build())
+                .build());
+        return;
+      }
+
+      ctx.writeAndFlush(
+          BoomerangEnvelope.newBuilder()
+              .setGetTaskResponse(
+                  io.boomerang.proto.GetTaskResponse.newBuilder()
+                      .setStatus(Status.OK)
+                      .setTask(ModelMapper.map(task))
+                      .build())
+              .build());
+    } else {
+      ctx.writeAndFlush(
+          BoomerangEnvelope.newBuilder()
+              .setGetTaskResponse(
+                  io.boomerang.proto.GetTaskResponse.newBuilder()
+                      .setStatus(Status.ERROR)
+                      .setErrorMessage("Task not found")
+                      .build())
+              .build());
     }
   }
 

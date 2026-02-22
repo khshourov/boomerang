@@ -6,6 +6,7 @@ import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -179,6 +180,66 @@ public class RocksDBLongTermTaskStore implements LongTermTaskStore, AutoCloseabl
       throw new StorageException(
           "Persistence error during task deletion for " + task.getTaskId(), e);
     }
+  }
+
+  @Override
+  public ListResult<TimerTask> list(
+      String clientId,
+      long scheduledAfter,
+      long scheduledBefore,
+      Boolean isRecurring,
+      int limit,
+      String nextToken) {
+    List<TimerTask> tasks = new ArrayList<>();
+    byte[] lowerBound;
+    if (nextToken != null && !nextToken.isEmpty()) {
+      lowerBound = Base64.getUrlDecoder().decode(nextToken);
+    } else {
+      lowerBound = longToBytes(scheduledAfter);
+    }
+    byte[] upperBound = longToBytes(scheduledBefore);
+
+    try (RocksIterator iter = db.newIterator(timeIndexHandle)) {
+      iter.seek(lowerBound);
+      // If we used nextToken, skip the current entry
+      if (nextToken != null && !nextToken.isEmpty() && iter.isValid()) {
+        iter.next();
+      }
+
+      while (iter.isValid()) {
+        byte[] key = iter.key();
+        if (isAfter(key, upperBound)) {
+          break;
+        }
+
+        try {
+          TimerTask task = TimerTaskSerializer.deserialize(iter.value());
+          if (applyFilters(task, clientId, isRecurring)) {
+            tasks.add(task);
+            if (tasks.size() >= limit) {
+              String newNextToken = Base64.getUrlEncoder().encodeToString(key);
+              return new ListResult<>(tasks, newNextToken);
+            }
+          }
+        } catch (IOException e) {
+          log.warn("Failed to deserialize task during list, skipping", e);
+        }
+        iter.next();
+      }
+    }
+
+    return new ListResult<>(tasks, null);
+  }
+
+  private boolean applyFilters(TimerTask task, String clientId, Boolean isRecurring) {
+    if (clientId != null && !clientId.equals(task.getClientId())) {
+      return false;
+    }
+    if (isRecurring != null) {
+      boolean taskIsRecurring = task.getRepeatIntervalMs() > 0;
+      return isRecurring == taskIsRecurring;
+    }
+    return true;
   }
 
   @Override

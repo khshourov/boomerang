@@ -317,4 +317,25 @@ class TieredTimerTest {
     verify(longTermStore, never())
         .save(argThat(task -> task.getClass().getSimpleName().contains("InternalTimerTask")));
   }
+
+  @Test
+  void shouldDelegateListToStore() {
+    String clientId = "client1";
+    long after = 1000L;
+    long before = 5000L;
+    Boolean recurring = true;
+    int limit = 10;
+    String token = "some-token";
+
+    ListResult<TimerTask> expectedResult =
+        new ListResult<>(java.util.Collections.emptyList(), null);
+    when(longTermStore.list(clientId, after, before, recurring, limit, token))
+        .thenReturn(expectedResult);
+
+    ListResult<TimerTask> result =
+        tieredTimer.list(clientId, after, before, recurring, limit, token);
+
+    assertThat(result).isSameAs(expectedResult);
+    verify(longTermStore).list(clientId, after, before, recurring, limit, token);
+  }
 }

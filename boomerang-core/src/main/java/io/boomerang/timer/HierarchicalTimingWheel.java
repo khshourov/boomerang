@@ -9,6 +9,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 /**
  * An implementation of a {@link Timer} that uses a hierarchical timing wheel for efficient timeout
@@ -111,6 +112,55 @@ public class HierarchicalTimingWheel implements Timer {
   @Override
   public Optional<TimerTask> get(String taskId) {
     return Optional.ofNullable(idMap.get(taskId));
+  }
+
+  @Override
+  public ListResult<TimerTask> list(
+      String clientId,
+      long scheduledAfter,
+      long scheduledBefore,
+      Boolean isRecurring,
+      int limit,
+      String nextToken) {
+    var stream =
+        idMap.values().stream()
+            .filter(task -> task.getExpirationMs() >= scheduledAfter)
+            .filter(task -> task.getExpirationMs() <= scheduledBefore)
+            .sorted(
+                (t1, t2) -> {
+                  int cmp = Long.compare(t1.getExpirationMs(), t2.getExpirationMs());
+                  if (cmp == 0) return t1.getTaskId().compareTo(t2.getTaskId());
+                  return cmp;
+                });
+
+    if (clientId != null) {
+      stream = stream.filter(task -> clientId.equals(task.getClientId()));
+    }
+    if (isRecurring != null) {
+      stream = stream.filter(task -> (task.getRepeatIntervalMs() > 0) == isRecurring);
+    }
+
+    if (nextToken != null && !nextToken.isEmpty()) {
+      // For HTW, nextToken is expected to be expiration_taskId format to match RocksDB for
+      // consistency.
+      // But simpler for HTW is to just skip until we find it or something greater.
+      var skipStream = stream;
+      stream =
+          skipStream.dropWhile(
+              t -> {
+                String currentToken = t.getExpirationMs() + "_" + t.getTaskId();
+                return currentToken.compareTo(nextToken) <= 0;
+              });
+    }
+
+    var tasks = stream.limit(limit).collect(Collectors.toList());
+    String nextCursor = null;
+    if (!tasks.isEmpty() && tasks.size() == limit) {
+      var last = tasks.getLast();
+      nextCursor = last.getExpirationMs() + "_" + last.getTaskId();
+    }
+
+    return new ListResult<>(tasks, nextCursor);
   }
 
   @Override

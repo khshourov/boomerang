@@ -10,6 +10,8 @@ import io.boomerang.config.ServerConfig;
 import io.boomerang.model.CallbackConfig;
 import io.boomerang.proto.AuthHandshake;
 import io.boomerang.proto.BoomerangEnvelope;
+import io.boomerang.proto.GetTaskRequest;
+import io.boomerang.proto.ListTasksRequest;
 import io.boomerang.proto.Status;
 import io.boomerang.proto.Task;
 import io.netty.bootstrap.Bootstrap;
@@ -30,11 +32,13 @@ import java.net.InetSocketAddress;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Base64;
+import java.util.Objects;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -91,6 +95,8 @@ class BoomerangBootstrapIntegrationTest {
             CallbackConfig.Protocol.HTTP, "http://localhost:" + mockServerPort + "/callback"),
         null,
         null);
+
+    authService.registerClient("admin-client", "admin-pass", true, null, null, null);
 
     clientGroup = new NioEventLoopGroup();
   }
@@ -187,6 +193,145 @@ class BoomerangBootstrapIntegrationTest {
             () -> {
               assertThat(bootstrap.getTimer().get(taskId)).isEmpty();
             });
+
+    channel.close().sync();
+  }
+
+  @Test
+  void shouldListTasksOverTcp() throws Exception {
+    Bootstrap b = new Bootstrap();
+    b.group(clientGroup)
+        .channel(NioSocketChannel.class)
+        .handler(
+            new ChannelInitializer<SocketChannel>() {
+              @Override
+              protected void initChannel(SocketChannel ch) {
+                ch.pipeline().addLast(new LengthFieldBasedFrameDecoder(1048576, 0, 4, 0, 4));
+                ch.pipeline().addLast(new LengthFieldPrepender(4));
+                ch.pipeline().addLast(new ProtobufDecoder(BoomerangEnvelope.getDefaultInstance()));
+                ch.pipeline().addLast(new ProtobufEncoder());
+                ch.pipeline()
+                    .addLast(
+                        new SimpleChannelInboundHandler<BoomerangEnvelope>() {
+                          @Override
+                          protected void channelRead0(
+                              ChannelHandlerContext ctx, BoomerangEnvelope msg) {
+                            responses.add(msg);
+                          }
+                        });
+              }
+            });
+
+    Channel channel = b.connect("localhost", 9975).sync().channel();
+
+    // 1. Authenticate as Admin
+    AuthHandshake adminHandshake =
+        AuthHandshake.newBuilder().setClientId("admin-client").setPassword("admin-pass").build();
+    channel.writeAndFlush(BoomerangEnvelope.newBuilder().setAuthHandshake(adminHandshake).build());
+    BoomerangEnvelope authResponse = responses.poll(10, TimeUnit.SECONDS);
+    Assertions.assertNotNull(authResponse);
+    String adminSessionId = authResponse.getAuthResponse().getSessionId();
+
+    // 2. Authenticate as test-client
+    channel.close().sync();
+    channel = b.connect("localhost", 9975).sync().channel();
+    AuthHandshake clientHandshake =
+        AuthHandshake.newBuilder().setClientId("test-client").setPassword("password").build();
+    channel.writeAndFlush(BoomerangEnvelope.newBuilder().setAuthHandshake(clientHandshake).build());
+    authResponse = responses.poll(10, TimeUnit.SECONDS);
+    Assertions.assertNotNull(authResponse);
+    String clientSessionId = authResponse.getAuthResponse().getSessionId();
+
+    // 3. Register Task for test-client
+    Task t1 =
+        Task.newBuilder()
+            .setPayload(ByteString.copyFrom("p1".getBytes()))
+            .setDelayMs(600000) // 10 minutes
+            .build();
+    channel.writeAndFlush(
+        BoomerangEnvelope.newBuilder()
+            .setSessionId(clientSessionId)
+            .setRegistrationRequest(t1)
+            .build());
+    responses.poll(10, TimeUnit.SECONDS); // Ignore reg response
+
+    // 4. Register Task for admin-client (recurring)
+    channel.close().sync();
+    channel = b.connect("localhost", 9975).sync().channel();
+    channel.writeAndFlush(BoomerangEnvelope.newBuilder().setAuthHandshake(adminHandshake).build());
+    adminSessionId =
+        Objects.requireNonNull(responses.poll(10, TimeUnit.SECONDS))
+            .getAuthResponse()
+            .getSessionId();
+
+    Task t2 =
+        Task.newBuilder()
+            .setPayload(ByteString.copyFrom("p2".getBytes()))
+            .setDelayMs(1200000)
+            .setRepeatIntervalMs(60000)
+            .build();
+    channel.writeAndFlush(
+        BoomerangEnvelope.newBuilder()
+            .setSessionId(adminSessionId)
+            .setRegistrationRequest(t2)
+            .build());
+    BoomerangEnvelope regResponse = responses.poll(10, TimeUnit.SECONDS);
+    Assertions.assertNotNull(regResponse);
+    String taskId2 = regResponse.getRegistrationResponse().getTaskId();
+
+    // 5. List all tasks (Admin)
+    channel.writeAndFlush(
+        BoomerangEnvelope.newBuilder()
+            .setSessionId(adminSessionId)
+            .setListTasksRequest(ListTasksRequest.newBuilder().setLimit(10).build())
+            .build());
+    BoomerangEnvelope listResponse = responses.poll(10, TimeUnit.SECONDS);
+    Assertions.assertNotNull(listResponse);
+    assertThat(listResponse.getListTasksResponse().getStatus()).isEqualTo(Status.OK);
+    assertThat(listResponse.getListTasksResponse().getTasksList()).hasSize(2);
+
+    // 6. List with filter (Recurring only)
+    channel.writeAndFlush(
+        BoomerangEnvelope.newBuilder()
+            .setSessionId(adminSessionId)
+            .setListTasksRequest(
+                ListTasksRequest.newBuilder().setIsRecurring(true).setLimit(10).build())
+            .build());
+    listResponse = responses.poll(10, TimeUnit.SECONDS);
+    Assertions.assertNotNull(listResponse);
+    assertThat(listResponse.getListTasksResponse().getTasksList()).hasSize(1);
+    assertThat(listResponse.getListTasksResponse().getTasks(0).getTaskId()).isEqualTo(taskId2);
+
+    // 7. Get specific task (Admin)
+    channel.writeAndFlush(
+        BoomerangEnvelope.newBuilder()
+            .setSessionId(adminSessionId)
+            .setGetTaskRequest(GetTaskRequest.newBuilder().setTaskId(taskId2).build())
+            .build());
+    BoomerangEnvelope getResponse = responses.poll(10, TimeUnit.SECONDS);
+    Assertions.assertNotNull(getResponse);
+    assertThat(getResponse.getGetTaskResponse().getStatus()).isEqualTo(Status.OK);
+    assertThat(getResponse.getGetTaskResponse().getTask().getTaskId()).isEqualTo(taskId2);
+
+    // 8. Client listing (should only see their own)
+    channel.close().sync();
+    channel = b.connect("localhost", 9975).sync().channel();
+    channel.writeAndFlush(BoomerangEnvelope.newBuilder().setAuthHandshake(clientHandshake).build());
+    clientSessionId =
+        Objects.requireNonNull(responses.poll(10, TimeUnit.SECONDS))
+            .getAuthResponse()
+            .getSessionId();
+
+    channel.writeAndFlush(
+        BoomerangEnvelope.newBuilder()
+            .setSessionId(clientSessionId)
+            .setListTasksRequest(ListTasksRequest.newBuilder().setLimit(10).build())
+            .build());
+    listResponse = responses.poll(10, TimeUnit.SECONDS);
+    Assertions.assertNotNull(listResponse);
+    assertThat(listResponse.getListTasksResponse().getTasksList()).hasSize(1);
+    assertThat(listResponse.getListTasksResponse().getTasks(0).getClientId())
+        .isEqualTo("test-client");
 
     channel.close().sync();
   }

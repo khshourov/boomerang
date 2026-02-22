@@ -32,6 +32,25 @@ public interface Timer {
    */
   Optional<TimerTask> get(String taskId);
 
+  /**
+   * Lists tasks based on the provided filters and pagination.
+   *
+   * @param clientId filter by client; if null, lists tasks for all clients (admin)
+   * @param scheduledAfter start of interval (Unix epoch ms)
+   * @param scheduledBefore end of interval (Unix epoch ms)
+   * @param isRecurring filter by one-shot (false) vs recurring (true); null means both
+   * @param limit max tasks to return
+   * @param nextToken opaque cursor for pagination
+   * @return a result containing the tasks and the next cursor
+   */
+  ListResult<TimerTask> list(
+      String clientId,
+      long scheduledAfter,
+      long scheduledBefore,
+      Boolean isRecurring,
+      int limit,
+      String nextToken);
+
   /** Shuts down the timer, releasing any background resources. */
   void shutdown();
 

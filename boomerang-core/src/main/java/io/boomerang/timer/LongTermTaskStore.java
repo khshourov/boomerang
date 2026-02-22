@@ -45,4 +45,23 @@ public interface LongTermTaskStore {
    * @param task the task to delete; must be non-null
    */
   void delete(TimerTask task);
+
+  /**
+   * Lists tasks based on the provided filters and pagination.
+   *
+   * @param clientId filter by client; if null, lists tasks for all clients (admin)
+   * @param scheduledAfter start of interval (Unix epoch ms)
+   * @param scheduledBefore end of interval (Unix epoch ms)
+   * @param isRecurring filter by one-shot (false) vs recurring (true); null means both
+   * @param limit max tasks to return
+   * @param nextToken opaque cursor for pagination
+   * @return a result containing the tasks and the next cursor
+   */
+  ListResult<TimerTask> list(
+      String clientId,
+      long scheduledAfter,
+      long scheduledBefore,
+      Boolean isRecurring,
+      int limit,
+      String nextToken);
 }

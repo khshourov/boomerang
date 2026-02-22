@@ -157,4 +157,66 @@ class RocksDBLongTermTaskStoreTest {
     Collection<TimerTask> due = store.fetchTasksDueBefore(expiration + 1);
     assertThat(due).hasSize(2).extracting(TimerTask::getTaskId).containsExactlyInAnyOrder("a", "b");
   }
+
+  @Test
+  void testListWithFiltersAndPagination() {
+    long now = System.currentTimeMillis();
+    // 5 tasks: 3 for client1, 2 for client2. 3 are recurring, 2 are one-shot.
+    TimerTask t1 =
+        TimerTask.withExpiration("t1", "client1", now + 1000, null, 0, 0, () -> {}); // One-shot
+    TimerTask t2 =
+        TimerTask.withExpiration("t2", "client1", now + 2000, null, 1000, 0, () -> {}); // Recurring
+    TimerTask t3 =
+        TimerTask.withExpiration("t3", "client2", now + 3000, null, 1000, 0, () -> {}); // Recurring
+    TimerTask t4 =
+        TimerTask.withExpiration("t4", "client1", now + 4000, null, 1000, 0, () -> {}); // Recurring
+    TimerTask t5 =
+        TimerTask.withExpiration("t5", "client2", now + 5000, null, 0, 0, () -> {}); // One-shot
+
+    store.save(t1);
+    store.save(t2);
+    store.save(t3);
+    store.save(t4);
+    store.save(t5);
+
+    // 1. List for client1 only
+    ListResult<TimerTask> r1 = store.list("client1", 0, Long.MAX_VALUE, null, 10, null);
+    assertThat(r1.items())
+        .hasSize(3)
+        .extracting(TimerTask::getTaskId)
+        .containsExactly("t1", "t2", "t4");
+
+    // 2. List recurring tasks only
+    ListResult<TimerTask> r2 = store.list(null, 0, Long.MAX_VALUE, true, 10, null);
+    assertThat(r2.items())
+        .hasSize(3)
+        .extracting(TimerTask::getTaskId)
+        .containsExactly("t2", "t3", "t4");
+
+    // 3. List with pagination (limit 2)
+    ListResult<TimerTask> page1 = store.list(null, 0, Long.MAX_VALUE, null, 2, null);
+    assertThat(page1.items())
+        .hasSize(2)
+        .extracting(TimerTask::getTaskId)
+        .containsExactly("t1", "t2");
+    assertThat(page1.nextToken()).isNotNull();
+
+    ListResult<TimerTask> page2 = store.list(null, 0, Long.MAX_VALUE, null, 2, page1.nextToken());
+    assertThat(page2.items())
+        .hasSize(2)
+        .extracting(TimerTask::getTaskId)
+        .containsExactly("t3", "t4");
+    assertThat(page2.nextToken()).isNotNull();
+
+    ListResult<TimerTask> page3 = store.list(null, 0, Long.MAX_VALUE, null, 2, page2.nextToken());
+    assertThat(page3.items()).hasSize(1).extracting(TimerTask::getTaskId).containsExactly("t5");
+    assertThat(page3.nextToken()).isNull();
+
+    // 4. List within time range
+    ListResult<TimerTask> range = store.list(null, now + 1500, now + 4500, null, 10, null);
+    assertThat(range.items())
+        .hasSize(3)
+        .extracting(TimerTask::getTaskId)
+        .containsExactly("t2", "t3", "t4");
+  }
 }

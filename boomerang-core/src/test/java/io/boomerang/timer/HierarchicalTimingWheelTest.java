@@ -230,4 +230,66 @@ class HierarchicalTimingWheelTest {
     TimerTask task = new TimerTask("task1", "client1", 100, null, 0, () -> {});
     assertThat(task.getPayload()).isNull();
   }
+
+  @Test
+  void testListWithFiltersAndPagination() {
+    long now = System.currentTimeMillis();
+    // 5 tasks: 3 for client1, 2 for client2. 3 are recurring, 2 are one-shot.
+    TimerTask t1 =
+        new TimerTask("t1", "client1", 1000, null, 0, () -> {}); // One-shot, exp now + 1000
+    TimerTask t2 =
+        new TimerTask("t2", "client1", 2000, null, 1000, () -> {}); // Recurring, exp now + 2000
+    TimerTask t3 =
+        new TimerTask("t3", "client2", 3000, null, 1000, () -> {}); // Recurring, exp now + 3000
+    TimerTask t4 =
+        new TimerTask("t4", "client1", 4000, null, 1000, () -> {}); // Recurring, exp now + 4000
+    TimerTask t5 =
+        new TimerTask("t5", "client2", 5000, null, 0, () -> {}); // One-shot, exp now + 5000
+
+    timer.add(t1);
+    timer.add(t2);
+    timer.add(t3);
+    timer.add(t4);
+    timer.add(t5);
+
+    // 1. List for client1 only
+    ListResult<TimerTask> r1 = timer.list("client1", 0, Long.MAX_VALUE, null, 10, null);
+    assertThat(r1.items())
+        .hasSize(3)
+        .extracting(TimerTask::getTaskId)
+        .containsExactly("t1", "t2", "t4");
+
+    // 2. List recurring tasks only
+    ListResult<TimerTask> r2 = timer.list(null, 0, Long.MAX_VALUE, true, 10, null);
+    assertThat(r2.items())
+        .hasSize(3)
+        .extracting(TimerTask::getTaskId)
+        .containsExactly("t2", "t3", "t4");
+
+    // 3. List with pagination (limit 2)
+    ListResult<TimerTask> page1 = timer.list(null, 0, Long.MAX_VALUE, null, 2, null);
+    assertThat(page1.items())
+        .hasSize(2)
+        .extracting(TimerTask::getTaskId)
+        .containsExactly("t1", "t2");
+    assertThat(page1.nextToken()).isNotNull();
+
+    ListResult<TimerTask> page2 = timer.list(null, 0, Long.MAX_VALUE, null, 2, page1.nextToken());
+    assertThat(page2.items())
+        .hasSize(2)
+        .extracting(TimerTask::getTaskId)
+        .containsExactly("t3", "t4");
+    assertThat(page2.nextToken()).isNotNull();
+
+    ListResult<TimerTask> page3 = timer.list(null, 0, Long.MAX_VALUE, null, 2, page2.nextToken());
+    assertThat(page3.items()).hasSize(1).extracting(TimerTask::getTaskId).containsExactly("t5");
+    assertThat(page3.nextToken()).isNull();
+
+    // 4. List within time range
+    ListResult<TimerTask> range = timer.list(null, now + 1500, now + 4500, null, 10, null);
+    assertThat(range.items())
+        .hasSize(3)
+        .extracting(TimerTask::getTaskId)
+        .containsExactly("t2", "t3", "t4");
+  }
 }

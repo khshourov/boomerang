@@ -24,10 +24,49 @@ message BoomerangEnvelope {
         ClientDeregistrationResponse client_deregistration_response = 13;
         CallbackRequest callback_request = 14;
         CallbackResponse callback_response = 15;
+        ListTasksRequest list_tasks_request = 16;
+        ListTasksResponse list_tasks_response = 17;
+        GetTaskRequest get_task_request = 18;
+        GetTaskResponse get_task_response = 19;
     }
 }
 
 // Handshake establishes the session and its configuration.
+// ... (rest of the file remains same, adding new messages at the end)
+
+message ListTasksRequest {
+    string client_id = 1;             // Filter by client; Admin can see all, Clients only their own
+    uint64 scheduled_after = 2;       // Start of interval (Unix epoch ms)
+    uint64 scheduled_before = 3;      // End of interval (Unix epoch ms)
+    optional bool is_recurring = 4;   // Filter by one-shot vs recurring
+    uint32 limit = 5;                 // Max tasks to return
+    string next_token = 6;            // For pagination, opaque cursor from previous response
+}
+
+message ListTasksResponse {
+    Status status = 1;
+    string error_message = 2;
+    repeated TaskDetails tasks = 3;
+    string next_token = 4;            // Opaque cursor for next page
+}
+
+message GetTaskRequest {
+    string task_id = 1;
+}
+
+message GetTaskResponse {
+    Status status = 1;
+    string error_message = 2;
+    TaskDetails task = 3;
+}
+
+message TaskDetails {
+    string task_id = 1;
+    string client_id = 2;
+    uint64 expiration_ms = 3;
+    uint64 repeat_interval_ms = 4;
+    bytes payload = 5;
+}
 // Used for the initial authentication and to negotiate session-wide policies.
 message AuthHandshake {
     string client_id = 1;             // The unique identifier for the client
