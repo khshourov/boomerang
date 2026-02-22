@@ -7,6 +7,8 @@ import io.boomerang.proto.ClientRegistrationRequest;
 import io.boomerang.proto.DLQPolicy;
 import io.boomerang.proto.RetryPolicy;
 import io.boomerang.proto.Status;
+import java.nio.CharBuffer;
+import java.nio.charset.StandardCharsets;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 
@@ -41,7 +43,7 @@ public class AdminClientRegisterCommand extends BoomTool.BaseCommand {
       names = {"--cb-protocol"},
       description = "Callback protocol (TCP, GRPC, HTTP, UDP)",
       defaultValue = "TCP")
-  String callbackProtocol;
+  CallbackConfig.Protocol callbackProtocol;
 
   @Option(
       names = {"--cb-endpoint"},
@@ -60,7 +62,7 @@ public class AdminClientRegisterCommand extends BoomTool.BaseCommand {
       names = {"--retry-strategy"},
       description = "Retry strategy (FIXED, EXPONENTIAL)",
       defaultValue = "FIXED")
-  String retryStrategy;
+  RetryPolicy.BackoffStrategy retryStrategy;
 
   @Option(
       names = {"--retry-interval"},
@@ -86,14 +88,14 @@ public class AdminClientRegisterCommand extends BoomTool.BaseCommand {
     try {
       CallbackConfig callback =
           CallbackConfig.newBuilder()
-              .setProtocol(CallbackConfig.Protocol.valueOf(callbackProtocol.toUpperCase()))
+              .setProtocol(callbackProtocol)
               .setEndpoint(callbackEndpoint)
               .build();
 
       RetryPolicy retry =
           RetryPolicy.newBuilder()
               .setMaxAttempts(retryMaxAttempts)
-              .setStrategy(RetryPolicy.BackoffStrategy.valueOf(retryStrategy.toUpperCase()))
+              .setStrategy(retryStrategy)
               .setIntervalMs(retryIntervalMs)
               .setMaxIntervalMs(retryMaxIntervalMs)
               .build();
@@ -103,7 +105,9 @@ public class AdminClientRegisterCommand extends BoomTool.BaseCommand {
       ClientRegistrationRequest request =
           ClientRegistrationRequest.newBuilder()
               .setClientId(clientId)
-              .setPassword(new String(clientPassword))
+              .setPasswordBytes(
+                  com.google.protobuf.ByteString.copyFrom(
+                      StandardCharsets.UTF_8.encode(CharBuffer.wrap(clientPassword))))
               .setIsAdmin(isAdmin)
               .setCallback(callback)
               .setRetry(retry)

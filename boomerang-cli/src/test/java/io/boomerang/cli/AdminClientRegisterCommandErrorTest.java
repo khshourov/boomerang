@@ -67,6 +67,6 @@ class AdminClientRegisterCommandErrorTest {
                 "dlq-topic");
 
     // Assert
-    assertEquals(1, exitCode);
+    assertEquals(2, exitCode);
   }
 }

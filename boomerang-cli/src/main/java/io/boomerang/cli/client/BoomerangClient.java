@@ -15,6 +15,8 @@ import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import io.netty.handler.codec.LengthFieldPrepender;
 import io.netty.handler.codec.protobuf.ProtobufDecoder;
 import io.netty.handler.codec.protobuf.ProtobufEncoder;
+import java.nio.CharBuffer;
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -79,7 +81,12 @@ public class BoomerangClient implements AutoCloseable {
    */
   public boolean login(String clientId, char[] password) throws Exception {
     AuthHandshake handshake =
-        AuthHandshake.newBuilder().setClientId(clientId).setPassword(new String(password)).build();
+        AuthHandshake.newBuilder()
+            .setClientId(clientId)
+            .setPasswordBytes(
+                com.google.protobuf.ByteString.copyFrom(
+                    StandardCharsets.UTF_8.encode(CharBuffer.wrap(password))))
+            .build();
     BoomerangEnvelope envelope = BoomerangEnvelope.newBuilder().setAuthHandshake(handshake).build();
 
     BoomerangEnvelope response = sendRequest(envelope);

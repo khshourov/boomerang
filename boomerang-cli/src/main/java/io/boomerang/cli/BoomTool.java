@@ -95,16 +95,8 @@ public class BoomTool implements Runnable {
       Terminal terminal = TerminalBuilder.builder().build();
       PrintWriter out = terminal.writer();
 
-      // Define ShellCommands with proper subcommands for the REPL
-      @Command(
-          name = "",
-          subcommands = {TaskCommand.class, AdminCommand.class, ExitCommand.class})
-      class ShellCommands implements Runnable {
-        @Override
-        public void run() {}
-      }
-
-      // Create a factory that provides 'this' BoomTool instance to subcommands
+      // Use 'this' BoomTool instance as the root for the interactive shell
+      // and create a factory that provides 'this' BoomTool instance to subcommands
       IFactory factory =
           new IFactory() {
             @Override
@@ -116,7 +108,8 @@ public class BoomTool implements Runnable {
             }
           };
 
-      CommandLine shellCmd = new CommandLine(new ShellCommands(), factory);
+      CommandLine shellCmd = new CommandLine(this, factory);
+      shellCmd.addSubcommand("exit", new ExitCommand());
       PicocliCommands picocliCommands = new PicocliCommands(shellCmd);
       LineReader reader =
           LineReaderBuilder.builder()
