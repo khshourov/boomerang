@@ -1,0 +1,71 @@
+package io.boomerang.cli;
+
+import io.boomerang.cli.client.BoomerangClient;
+import io.boomerang.proto.BoomerangEnvelope;
+import io.boomerang.proto.Status;
+import io.boomerang.proto.Task;
+import java.nio.charset.Charset;
+import picocli.CommandLine.Command;
+import picocli.CommandLine.Option;
+
+/**
+ * Subcommand for registering a new task.
+ *
+ * @since 0.1.0
+ */
+@Command(name = "register", description = "Register a new task.")
+public class TaskRegisterCommand extends BoomTool.BaseCommand {
+
+  @Option(
+      names = {"-l", "--payload"},
+      description = "The binary payload for the task (as a string)",
+      required = true)
+  String payload;
+
+  @Option(
+      names = {"-d", "--delay"},
+      description = "Delay from registration in milliseconds",
+      required = true)
+  long delayMs;
+
+  @Option(
+      names = {"-r", "--repeat"},
+      description = "Repeat interval in milliseconds (0 for no repetition)",
+      defaultValue = "0")
+  long repeatIntervalMs;
+
+  @Option(
+      names = {"-c", "--charset"},
+      description = "Charset for payload encoding (default: ${DEFAULT-VALUE})",
+      defaultValue = "UTF-8")
+  String charset;
+
+  @Override
+  protected Integer executeWithClient(BoomerangClient client) throws Exception {
+    Task task =
+        Task.newBuilder()
+            .setPayload(com.google.protobuf.ByteString.copyFrom(payload, Charset.forName(charset)))
+            .setDelayMs(delayMs)
+            .setRepeatIntervalMs(repeatIntervalMs)
+            .build();
+
+    BoomerangEnvelope envelope =
+        BoomerangEnvelope.newBuilder().setRegistrationRequest(task).build();
+
+    BoomerangEnvelope response = client.sendRequest(envelope);
+
+    if (response.hasRegistrationResponse()) {
+      var registration = response.getRegistrationResponse();
+      if (registration.getStatus() == Status.OK) {
+        System.out.printf("Task registered successfully! ID: %s%n", registration.getTaskId());
+        System.out.printf("Scheduled for: %d ms%n", registration.getScheduledTimeMs());
+        return 0;
+      } else {
+        System.err.printf("Error registering task: %s%n", registration.getErrorMessage());
+      }
+    } else {
+      System.err.println("Error: Unexpected response from server.");
+    }
+    return 1;
+  }
+}

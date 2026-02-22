@@ -29,7 +29,15 @@ This plan tracks the development of Boomerang, a high-performance, persistent sc
 - [x] **Connection Pooling:** Manage efficient reuse of outbound connections.
 
 ## Phase 5: Management Tools
-- [ ] **CLI Tool (`boomtool`):** Build the picocli application for task management.
+- [x] **CLI Tool (`boomtool`):** Build the picocli application for task management.
+- [ ] **Management API & Task Listing:**
+    - [ ] Implement `ListTasks` and `GetTask` in Protobuf and Server.
+    - [ ] Support scope-based visibility (Admin: all, Client: own).
+    - [ ] Add pagination support for task listing.
+- [ ] **E2E Testing (CLI & REPL):**
+    - [ ] Implement full integration tests for `boomtool` against a live `BoomerangServer`.
+    - [ ] Test one-shot/batch mode commands.
+    - [ ] Test interactive REPL flow using terminal simulation.
 - [ ] **GraalVM Native Image:** Configure the build to produce a standalone CLI binary.
 - [ ] **Web Panel (Frontend):** Develop the React + TypeScript SPA.
 - [ ] **Management API:** Add specialized endpoints to the server to feed the dashboard.
