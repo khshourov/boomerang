@@ -30,10 +30,14 @@ This plan tracks the development of Boomerang, a high-performance, persistent sc
 
 ## Phase 5: Management Tools
 - [x] **CLI Tool (`boomtool`):** Build the picocli application for task management.
-- [ ] **Management API & Task Listing:**
-    - [ ] Implement `ListTasks` and `GetTask` in Protobuf and Server.
-    - [ ] Support scope-based visibility (Admin: all, Client: own).
-    - [ ] Add pagination support for task listing.
+- [ ] **5.2 Management API & Task Listing:**
+    - [ ] Implement `ListTasksRequest`, `ListTasksResponse`, `GetTaskRequest`, and `GetTaskResponse` in Protobuf.
+    - [ ] Support advanced filtering in `ListTasks`:
+        - [ ] Interval-based: `scheduled_after`, `scheduled_before`, and `range(start, end)`.
+        - [ ] Task Type: Filter by one-shot or recurring (repeat) tasks.
+        - [ ] Administrative: `client_id` filter (Admin can see all/specific clients, Client sees only own).
+    - [ ] Add pagination support (`limit` and `offset`).
+    - [ ] Implement `GetTask` by ID with optional `client_id` for Admin.
 - [ ] **E2E Testing (CLI & REPL):**
     - [ ] Implement full integration tests for `boomtool` against a live `BoomerangServer`.
     - [ ] Test one-shot/batch mode commands.
