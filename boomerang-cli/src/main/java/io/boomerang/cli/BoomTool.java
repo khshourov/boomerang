@@ -150,7 +150,12 @@ public class BoomTool implements Runnable {
   @Command(
       name = "task",
       description = "Manage tasks.",
-      subcommands = {TaskRegisterCommand.class, TaskCancelCommand.class})
+      subcommands = {
+        TaskRegisterCommand.class,
+        TaskCancelCommand.class,
+        TaskListCommand.class,
+        TaskGetCommand.class
+      })
   static class TaskCommand implements Runnable {
     @Override
     public void run() {

@@ -2,6 +2,10 @@ package io.boomerang.cli.client;
 
 import io.boomerang.proto.AuthHandshake;
 import io.boomerang.proto.BoomerangEnvelope;
+import io.boomerang.proto.GetTaskRequest;
+import io.boomerang.proto.GetTaskResponse;
+import io.boomerang.proto.ListTasksRequest;
+import io.boomerang.proto.ListTasksResponse;
 import io.boomerang.proto.Status;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
@@ -95,6 +99,40 @@ public class BoomerangClient implements AutoCloseable {
       return true;
     }
     return false;
+  }
+
+  /**
+   * Lists tasks based on the given request.
+   *
+   * @param request the listing request
+   * @return the listing response
+   * @throws Exception if an error occurs during communication
+   */
+  public ListTasksResponse listTasks(ListTasksRequest request) throws Exception {
+    BoomerangEnvelope envelope =
+        BoomerangEnvelope.newBuilder().setListTasksRequest(request).build();
+    BoomerangEnvelope response = sendRequest(envelope);
+    if (response.hasListTasksResponse()) {
+      return response.getListTasksResponse();
+    }
+    throw new RuntimeException("Unexpected response: " + response.getPayloadCase());
+  }
+
+  /**
+   * Retrieves a task by its ID.
+   *
+   * @param taskId the task identifier
+   * @return the retrieval response
+   * @throws Exception if an error occurs during communication
+   */
+  public GetTaskResponse getTask(String taskId) throws Exception {
+    GetTaskRequest request = GetTaskRequest.newBuilder().setTaskId(taskId).build();
+    BoomerangEnvelope envelope = BoomerangEnvelope.newBuilder().setGetTaskRequest(request).build();
+    BoomerangEnvelope response = sendRequest(envelope);
+    if (response.hasGetTaskResponse()) {
+      return response.getGetTaskResponse();
+    }
+    throw new RuntimeException("Unexpected response: " + response.getPayloadCase());
   }
 
   /**
