@@ -8,3 +8,4 @@ rootProject.name = "boomerang"
 include("boomerang-proto")
 include("boomerang-core")
 include("boomerang-cli")
+include("boomerang-client-java")

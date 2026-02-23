@@ -48,11 +48,11 @@ This plan tracks the development of Boomerang, a high-performance, persistent sc
     - [ ] Test one-shot/batch mode commands.
     - [ ] Test interactive REPL flow using terminal simulation.
 - [x] **GraalVM Native Image:** Configure the build to produce a standalone CLI binary.
-- [ ] **Java Client SDK (`boomerang-client`):**
-    - [ ] Scaffold `boomerang-client` module as a separate library.
-    - [ ] Implement a clean, synchronous Java API for task registration and management.
-    - [ ] Implement an integrated Callback Receiver supporting TCP, UDP, gRPC, and HTTP.
-    - [ ] Support auth session lifecycle and automatic reconnection.
+- [x] **Java Client SDK (`boomerang-client-java`):**
+    - [x] Scaffold `boomerang-client-java` module as a separate library.
+    - [x] Implement a clean, synchronous Java API for task registration and management.
+    - [x] Implement an integrated Callback Receiver supporting TCP, UDP, gRPC, and HTTP.
+    - [x] Support auth session lifecycle and automatic reconnection.
 - [ ] **Migrate CLI to SDK:**
     - [ ] Refactor `boomerang-cli` to use the `boomerang-client` library.
     - [ ] Remove duplicate communication logic from the CLI module.
