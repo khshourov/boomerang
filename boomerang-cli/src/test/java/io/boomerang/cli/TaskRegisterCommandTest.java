@@ -2,12 +2,12 @@ package io.boomerang.cli;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import io.boomerang.cli.client.BoomerangClient;
-import io.boomerang.proto.BoomerangEnvelope;
+import io.boomerang.client.BoomerangClient;
 import io.boomerang.proto.RegistrationResponse;
 import io.boomerang.proto.Status;
 import org.junit.jupiter.api.BeforeEach;
@@ -23,32 +23,39 @@ class TaskRegisterCommandTest {
   @BeforeEach
   void setUp() {
     mockClient = mock(BoomerangClient.class);
-    cmd =
-        new TaskRegisterCommand() {
+    root =
+        new BoomTool() {
           @Override
-          protected BoomerangClient createClient(String host, int port) {
+          protected BoomerangClient createClient(
+              String host, int port, String clientId, String password) {
             return mockClient;
           }
         };
-    root = new BoomTool();
+    cmd = new TaskRegisterCommand();
   }
 
   @Test
   void shouldRegisterTaskSuccessfully() throws Exception {
     // Arrange
-    when(mockClient.login(any(), any())).thenReturn(true);
+    doAnswer(
+            invocation -> {
+              mockClient.login(any(), any());
+              return null;
+            })
+        .when(mockClient)
+        .connect();
     RegistrationResponse response =
         RegistrationResponse.newBuilder()
             .setStatus(Status.OK)
             .setTaskId("test-task-id")
             .setScheduledTimeMs(1000L)
             .build();
-    when(mockClient.sendRequest(any(BoomerangEnvelope.class)))
-        .thenReturn(BoomerangEnvelope.newBuilder().setRegistrationResponse(response).build());
+    when(mockClient.register(any())).thenReturn(response);
 
     IFactory factory =
         new IFactory() {
           @Override
+          @SuppressWarnings("unchecked")
           public <K> K create(Class<K> cls) throws Exception {
             if (cls == TaskRegisterCommand.class) {
               return (K) cmd;
@@ -66,24 +73,23 @@ class TaskRegisterCommandTest {
     assertEquals(0, exitCode);
     verify(mockClient).connect();
     verify(mockClient).login(any(), any());
-    verify(mockClient).sendRequest(any(BoomerangEnvelope.class));
+    verify(mockClient).register(any());
   }
 
   @Test
   void shouldHandleRegistrationFailure() throws Exception {
     // Arrange
-    when(mockClient.login(any(), any())).thenReturn(true);
     RegistrationResponse response =
         RegistrationResponse.newBuilder()
             .setStatus(Status.ERROR)
             .setErrorMessage("Something went wrong")
             .build();
-    when(mockClient.sendRequest(any(BoomerangEnvelope.class)))
-        .thenReturn(BoomerangEnvelope.newBuilder().setRegistrationResponse(response).build());
+    when(mockClient.register(any())).thenReturn(response);
 
     IFactory factory =
         new IFactory() {
           @Override
+          @SuppressWarnings("unchecked")
           public <K> K create(Class<K> cls) throws Exception {
             if (cls == TaskRegisterCommand.class) {
               return (K) cmd;
@@ -99,25 +105,24 @@ class TaskRegisterCommandTest {
 
     // Assert
     assertEquals(1, exitCode);
-    verify(mockClient).sendRequest(any(BoomerangEnvelope.class));
+    verify(mockClient).register(any());
   }
 
   @Test
   void shouldRegisterTaskWithCustomCharset() throws Exception {
     // Arrange
-    when(mockClient.login(any(), any())).thenReturn(true);
     RegistrationResponse response =
         RegistrationResponse.newBuilder()
             .setStatus(Status.OK)
             .setTaskId("test-task-id")
             .setScheduledTimeMs(1000L)
             .build();
-    when(mockClient.sendRequest(any(BoomerangEnvelope.class)))
-        .thenReturn(BoomerangEnvelope.newBuilder().setRegistrationResponse(response).build());
+    when(mockClient.register(any())).thenReturn(response);
 
     IFactory factory =
         new IFactory() {
           @Override
+          @SuppressWarnings("unchecked")
           public <K> K create(Class<K> cls) throws Exception {
             if (cls == TaskRegisterCommand.class) {
               return (K) cmd;
@@ -145,35 +150,6 @@ class TaskRegisterCommandTest {
 
     // Assert
     assertEquals(0, exitCode);
-    verify(mockClient).sendRequest(any(BoomerangEnvelope.class));
-  }
-
-  @Test
-  void shouldHandleUnexpectedResponse() throws Exception {
-    // Arrange
-    when(mockClient.login(any(), any())).thenReturn(true);
-    // Return an envelope without a registration response
-    when(mockClient.sendRequest(any(BoomerangEnvelope.class)))
-        .thenReturn(BoomerangEnvelope.newBuilder().setSessionId("some-id").build());
-
-    IFactory factory =
-        new IFactory() {
-          @Override
-          public <K> K create(Class<K> cls) throws Exception {
-            if (cls == TaskRegisterCommand.class) {
-              return (K) cmd;
-            }
-            return CommandLine.defaultFactory().create(cls);
-          }
-        };
-
-    // Act
-    int exitCode =
-        new CommandLine(root, factory)
-            .execute("-u", "user", "-p", "pass", "task", "register", "-l", "hello", "-d", "5000");
-
-    // Assert
-    assertEquals(1, exitCode);
-    verify(mockClient).sendRequest(any(BoomerangEnvelope.class));
+    verify(mockClient).register(any());
   }
 }

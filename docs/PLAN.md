@@ -53,9 +53,9 @@ This plan tracks the development of Boomerang, a high-performance, persistent sc
     - [x] Implement a clean, synchronous Java API for task registration and management.
     - [x] Implement an integrated Callback Receiver supporting TCP, UDP, gRPC, and HTTP.
     - [x] Support auth session lifecycle and automatic reconnection.
-- [ ] **Migrate CLI to SDK:**
-    - [ ] Refactor `boomerang-cli` to use the `boomerang-client` library.
-    - [ ] Remove duplicate communication logic from the CLI module.
+- [x] **Migrate CLI to SDK:**
+    - [x] Refactor `boomerang-cli` to use the `boomerang-client` library.
+    - [x] Remove duplicate communication logic from the CLI module.
 
 ## Phase 6: Management Web Panel
 - [ ] **Backend (Spring Boot):**

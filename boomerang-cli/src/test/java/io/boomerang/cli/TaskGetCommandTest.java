@@ -3,12 +3,13 @@ package io.boomerang.cli;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.google.protobuf.ByteString;
-import io.boomerang.cli.client.BoomerangClient;
+import io.boomerang.client.BoomerangClient;
 import io.boomerang.proto.GetTaskResponse;
 import io.boomerang.proto.Status;
 import io.boomerang.proto.TaskDetails;
@@ -26,20 +27,27 @@ class TaskGetCommandTest {
   @BeforeEach
   void setUp() {
     mockClient = mock(BoomerangClient.class);
-    cmd =
-        new TaskGetCommand() {
+    root =
+        new BoomTool() {
           @Override
-          protected BoomerangClient createClient(String host, int port) {
+          protected BoomerangClient createClient(
+              String host, int port, String clientId, String password) {
             return mockClient;
           }
         };
-    root = new BoomTool();
+    cmd = new TaskGetCommand();
   }
 
   @Test
   void shouldGetTaskSuccessfully() throws Exception {
     // Arrange
-    when(mockClient.login(any(), any())).thenReturn(true);
+    doAnswer(
+            invocation -> {
+              mockClient.login(any(), any());
+              return null;
+            })
+        .when(mockClient)
+        .connect();
     TaskDetails task =
         TaskDetails.newBuilder()
             .setTaskId("task-1")
@@ -54,6 +62,7 @@ class TaskGetCommandTest {
     IFactory factory =
         new IFactory() {
           @Override
+          @SuppressWarnings("unchecked")
           public <K> K create(Class<K> cls) throws Exception {
             if (cls == TaskGetCommand.class) {
               return (K) cmd;
@@ -74,7 +83,6 @@ class TaskGetCommandTest {
   @Test
   void shouldGetTaskWithCustomCharset() throws Exception {
     // Arrange
-    when(mockClient.login(any(), any())).thenReturn(true);
     TaskDetails task =
         TaskDetails.newBuilder()
             .setTaskId("task-1")
@@ -89,6 +97,7 @@ class TaskGetCommandTest {
     IFactory factory =
         new IFactory() {
           @Override
+          @SuppressWarnings("unchecked")
           public <K> K create(Class<K> cls) throws Exception {
             if (cls == TaskGetCommand.class) {
               return (K) cmd;
@@ -110,7 +119,6 @@ class TaskGetCommandTest {
   @Test
   void shouldHandleGetTaskFailure() throws Exception {
     // Arrange
-    when(mockClient.login(any(), any())).thenReturn(true);
     GetTaskResponse response =
         GetTaskResponse.newBuilder().setStatus(Status.ERROR).setErrorMessage("Not found").build();
     when(mockClient.getTask(anyString())).thenReturn(response);
@@ -118,6 +126,7 @@ class TaskGetCommandTest {
     IFactory factory =
         new IFactory() {
           @Override
+          @SuppressWarnings("unchecked")
           public <K> K create(Class<K> cls) throws Exception {
             if (cls == TaskGetCommand.class) {
               return (K) cmd;

@@ -1,14 +1,12 @@
 package io.boomerang.cli;
 
-import io.boomerang.cli.client.BoomerangClient;
-import io.boomerang.proto.BoomerangEnvelope;
+import io.boomerang.client.BoomerangClient;
 import io.boomerang.proto.CallbackConfig;
 import io.boomerang.proto.ClientRegistrationRequest;
+import io.boomerang.proto.ClientRegistrationResponse;
 import io.boomerang.proto.DLQPolicy;
 import io.boomerang.proto.RetryPolicy;
 import io.boomerang.proto.Status;
-import java.nio.CharBuffer;
-import java.nio.charset.StandardCharsets;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 
@@ -105,30 +103,20 @@ public class AdminClientRegisterCommand extends BoomTool.BaseCommand {
       ClientRegistrationRequest request =
           ClientRegistrationRequest.newBuilder()
               .setClientId(clientId)
-              .setPasswordBytes(
-                  com.google.protobuf.ByteString.copyFrom(
-                      StandardCharsets.UTF_8.encode(CharBuffer.wrap(clientPassword))))
+              .setPassword(new String(clientPassword))
               .setIsAdmin(isAdmin)
               .setCallback(callback)
               .setRetry(retry)
               .setDlq(dlq)
               .build();
 
-      BoomerangEnvelope envelope =
-          BoomerangEnvelope.newBuilder().setClientRegistration(request).build();
+      ClientRegistrationResponse response = client.registerClient(request);
 
-      BoomerangEnvelope response = client.sendRequest(envelope);
-
-      if (response.hasClientRegistrationResponse()) {
-        var registration = response.getClientRegistrationResponse();
-        if (registration.getStatus() == Status.OK) {
-          System.out.printf("Client %s registered successfully!%n", clientId);
-          return 0;
-        } else {
-          System.err.printf("Error registering client: %s%n", registration.getErrorMessage());
-        }
+      if (response.getStatus() == Status.OK) {
+        System.out.printf("Client %s registered successfully!%n", clientId);
+        return 0;
       } else {
-        System.err.println("Error: Unexpected response from server.");
+        System.err.printf("Error registering client: %s%n", response.getErrorMessage());
       }
       return 1;
     } finally {

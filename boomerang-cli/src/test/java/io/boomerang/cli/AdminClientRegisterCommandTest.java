@@ -2,12 +2,12 @@ package io.boomerang.cli;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import io.boomerang.cli.client.BoomerangClient;
-import io.boomerang.proto.BoomerangEnvelope;
+import io.boomerang.client.BoomerangClient;
 import io.boomerang.proto.ClientRegistrationResponse;
 import io.boomerang.proto.Status;
 import org.junit.jupiter.api.BeforeEach;
@@ -23,28 +23,35 @@ class AdminClientRegisterCommandTest {
   @BeforeEach
   void setUp() {
     mockClient = mock(BoomerangClient.class);
-    cmd =
-        new AdminClientRegisterCommand() {
+    root =
+        new BoomTool() {
           @Override
-          protected BoomerangClient createClient(String host, int port) {
+          protected BoomerangClient createClient(
+              String host, int port, String clientId, String password) {
             return mockClient;
           }
         };
-    root = new BoomTool();
+    cmd = new AdminClientRegisterCommand();
   }
 
   @Test
   void shouldRegisterClientSuccessfully() throws Exception {
     // Arrange
-    when(mockClient.login(any(), any())).thenReturn(true);
+    doAnswer(
+            invocation -> {
+              mockClient.login(any(), any());
+              return null;
+            })
+        .when(mockClient)
+        .connect();
     ClientRegistrationResponse response =
         ClientRegistrationResponse.newBuilder().setStatus(Status.OK).build();
-    when(mockClient.sendRequest(any(BoomerangEnvelope.class)))
-        .thenReturn(BoomerangEnvelope.newBuilder().setClientRegistrationResponse(response).build());
+    when(mockClient.registerClient(any())).thenReturn(response);
 
     IFactory factory =
         new IFactory() {
           @Override
+          @SuppressWarnings("unchecked")
           public <K> K create(Class<K> cls) throws Exception {
             if (cls == AdminClientRegisterCommand.class) {
               return (K) cmd;
@@ -76,6 +83,6 @@ class AdminClientRegisterCommandTest {
     assertEquals(0, exitCode);
     verify(mockClient).connect();
     verify(mockClient).login(any(), any());
-    verify(mockClient).sendRequest(any(BoomerangEnvelope.class));
+    verify(mockClient).registerClient(any());
   }
 }

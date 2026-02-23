@@ -1,5 +1,9 @@
 package io.boomerang.client;
 
+import io.boomerang.proto.ClientDeregistrationRequest;
+import io.boomerang.proto.ClientDeregistrationResponse;
+import io.boomerang.proto.ClientRegistrationRequest;
+import io.boomerang.proto.ClientRegistrationResponse;
 import io.boomerang.proto.GetTaskResponse;
 import io.boomerang.proto.ListTasksRequest;
 import io.boomerang.proto.ListTasksResponse;
@@ -64,6 +68,26 @@ public interface BoomerangClient extends AutoCloseable {
    * @throws BoomerangException if listing fails
    */
   ListTasksResponse listTasks(ListTasksRequest request) throws BoomerangException;
+
+  /**
+   * Registers a new client (Admin only).
+   *
+   * @param request the client registration request
+   * @return the registration response
+   * @throws BoomerangException if registration fails
+   */
+  ClientRegistrationResponse registerClient(ClientRegistrationRequest request)
+      throws BoomerangException;
+
+  /**
+   * Deregisters an existing client (Admin only).
+   *
+   * @param request the client deregistration request
+   * @return the deregistration response
+   * @throws BoomerangException if deregistration fails
+   */
+  ClientDeregistrationResponse deregisterClient(ClientDeregistrationRequest request)
+      throws BoomerangException;
 
   /** Closes the client and releases any associated resources. */
   @Override

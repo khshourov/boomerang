@@ -1,11 +1,10 @@
 package io.boomerang.cli;
 
-import io.boomerang.cli.client.BoomerangClient;
+import io.boomerang.client.BoomerangClient;
 import io.boomerang.proto.ListTasksRequest;
 import io.boomerang.proto.ListTasksResponse;
 import io.boomerang.proto.Status;
 import io.boomerang.proto.TaskDetails;
-import java.time.Instant;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 

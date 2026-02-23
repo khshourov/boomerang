@@ -3,6 +3,10 @@ package io.boomerang.client;
 import io.boomerang.proto.AuthHandshake;
 import io.boomerang.proto.BoomerangEnvelope;
 import io.boomerang.proto.CancellationRequest;
+import io.boomerang.proto.ClientDeregistrationRequest;
+import io.boomerang.proto.ClientDeregistrationResponse;
+import io.boomerang.proto.ClientRegistrationRequest;
+import io.boomerang.proto.ClientRegistrationResponse;
 import io.boomerang.proto.GetTaskRequest;
 import io.boomerang.proto.GetTaskResponse;
 import io.boomerang.proto.ListTasksRequest;
@@ -128,6 +132,34 @@ public class DefaultBoomerangClient implements BoomerangClient {
           response.getListTasksResponse().getStatus(),
           response.getListTasksResponse().getErrorMessage());
       return response.getListTasksResponse();
+    }
+    throw new BoomerangException("Unexpected response type: " + response.getPayloadCase());
+  }
+
+  @Override
+  public ClientRegistrationResponse registerClient(ClientRegistrationRequest request)
+      throws BoomerangException {
+    BoomerangEnvelope envelope = createEnvelope().toBuilder().setClientRegistration(request).build();
+    BoomerangEnvelope response = sendAndReceive(envelope);
+    if (response.hasClientRegistrationResponse()) {
+      checkStatus(
+          response.getClientRegistrationResponse().getStatus(),
+          response.getClientRegistrationResponse().getErrorMessage());
+      return response.getClientRegistrationResponse();
+    }
+    throw new BoomerangException("Unexpected response type: " + response.getPayloadCase());
+  }
+
+  @Override
+  public ClientDeregistrationResponse deregisterClient(ClientDeregistrationRequest request)
+      throws BoomerangException {
+    BoomerangEnvelope envelope = createEnvelope().toBuilder().setClientDeregistration(request).build();
+    BoomerangEnvelope response = sendAndReceive(envelope);
+    if (response.hasClientDeregistrationResponse()) {
+      checkStatus(
+          response.getClientDeregistrationResponse().getStatus(),
+          response.getClientDeregistrationResponse().getErrorMessage());
+      return response.getClientDeregistrationResponse();
     }
     throw new BoomerangException("Unexpected response type: " + response.getPayloadCase());
   }

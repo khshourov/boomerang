@@ -1,11 +1,9 @@
 package io.boomerang.cli;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
-import io.boomerang.cli.client.BoomerangClient;
+import io.boomerang.client.BoomerangClient;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import picocli.CommandLine;
@@ -19,24 +17,24 @@ class AdminClientRegisterCommandErrorTest {
   @BeforeEach
   void setUp() {
     mockClient = mock(BoomerangClient.class);
-    cmd =
-        new AdminClientRegisterCommand() {
+    root =
+        new BoomTool() {
           @Override
-          protected BoomerangClient createClient(String host, int port) {
+          protected BoomerangClient createClient(
+              String host, int port, String clientId, String password) {
             return mockClient;
           }
         };
-    root = new BoomTool();
+    cmd = new AdminClientRegisterCommand();
   }
 
   @Test
   void shouldReturnOneOnInvalidProtocol() throws Exception {
-    // Arrange
-    when(mockClient.login(any(), any())).thenReturn(true);
-
+    // Act
     IFactory factory =
         new IFactory() {
           @Override
+          @SuppressWarnings("unchecked")
           public <K> K create(Class<K> cls) throws Exception {
             if (cls == AdminClientRegisterCommand.class) {
               return (K) cmd;

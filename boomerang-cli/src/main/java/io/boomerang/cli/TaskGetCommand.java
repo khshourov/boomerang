@@ -1,6 +1,6 @@
 package io.boomerang.cli;
 
-import io.boomerang.cli.client.BoomerangClient;
+import io.boomerang.client.BoomerangClient;
 import io.boomerang.proto.GetTaskResponse;
 import io.boomerang.proto.Status;
 import io.boomerang.proto.TaskDetails;

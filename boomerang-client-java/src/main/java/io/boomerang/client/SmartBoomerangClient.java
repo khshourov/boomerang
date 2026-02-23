@@ -1,5 +1,9 @@
 package io.boomerang.client;
 
+import io.boomerang.proto.ClientDeregistrationRequest;
+import io.boomerang.proto.ClientDeregistrationResponse;
+import io.boomerang.proto.ClientRegistrationRequest;
+import io.boomerang.proto.ClientRegistrationResponse;
 import io.boomerang.proto.GetTaskResponse;
 import io.boomerang.proto.ListTasksRequest;
 import io.boomerang.proto.ListTasksResponse;
@@ -63,6 +67,18 @@ public class SmartBoomerangClient implements BoomerangClient {
   @Override
   public ListTasksResponse listTasks(ListTasksRequest request) throws BoomerangException {
     return executeWithRetry(() -> delegate.listTasks(request));
+  }
+
+  @Override
+  public ClientRegistrationResponse registerClient(ClientRegistrationRequest request)
+      throws BoomerangException {
+    return executeWithRetry(() -> delegate.registerClient(request));
+  }
+
+  @Override
+  public ClientDeregistrationResponse deregisterClient(ClientDeregistrationRequest request)
+      throws BoomerangException {
+    return executeWithRetry(() -> delegate.deregisterClient(request));
   }
 
   private <T> T executeWithRetry(ClientAction<T> action) throws BoomerangException {

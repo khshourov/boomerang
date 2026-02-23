@@ -1,6 +1,8 @@
 package io.boomerang.cli;
 
-import io.boomerang.cli.client.BoomerangClient;
+import io.boomerang.client.BoomerangClient;
+import io.boomerang.client.DefaultBoomerangClient;
+import io.boomerang.client.SmartBoomerangClient;
 import java.io.PrintWriter;
 import java.util.concurrent.Callable;
 import org.jline.reader.EndOfFileException;
@@ -66,6 +68,19 @@ public class BoomTool implements Runnable {
   private BoomerangClient interactiveClient;
 
   /**
+   * Creates a new client instance. Can be overridden for testing.
+   *
+   * @param host server host
+   * @param port server port
+   * @param clientId client identifier
+   * @param password client password
+   * @return a new {@link BoomerangClient}
+   */
+  protected BoomerangClient createClient(String host, int port, String clientId, String password) {
+    return new SmartBoomerangClient(new DefaultBoomerangClient(host, port), clientId, password);
+  }
+
+  /**
    * Main entry point for the CLI.
    *
    * @param args command line arguments
@@ -81,19 +96,16 @@ public class BoomTool implements Runnable {
   public void run() {
     // This is called when no subcommand is provided (Interactive Mode)
     if (clientId == null || password == null) {
-      System.err.println("Error: Missing required options: '--user' and '--password' are required for interactive mode.");
+      System.err.println(
+          "Error: Missing required options: '--user' and '--password' are required for interactive mode.");
       CommandLine.usage(this, System.err);
       return;
     }
 
     System.out.println("Entering interactive mode. Type 'exit' to quit.");
 
-    try (BoomerangClient client = new BoomerangClient(host, port)) {
-      client.connect();
-      if (!client.login(clientId, password)) {
-        System.err.println("Error: Authentication failed.");
-        return;
-      }
+    try (BoomerangClient client = createClient(host, port, clientId, new String(password))) {
+      client.connect(); // SmartBoomerangClient handles login during connect
       this.interactiveClient = client;
 
       // Set up JLine terminal and reader
@@ -105,6 +117,7 @@ public class BoomTool implements Runnable {
       IFactory factory =
           new IFactory() {
             @Override
+            @SuppressWarnings("unchecked")
             public <K> K create(Class<K> cls) throws Exception {
               if (cls == BoomTool.class) {
                 return (K) BoomTool.this;
@@ -231,17 +244,15 @@ public class BoomTool implements Runnable {
 
       // One-shot mode: validate options, create, connect, login, execute, and close
       if (root.clientId == null || root.password == null) {
-        System.err.println("Error: Missing required options: '--user' and '--password' are required.");
+        System.err.println(
+            "Error: Missing required options: '--user' and '--password' are required.");
         CommandLine.usage(root, System.err);
         return 1;
       }
 
-      try (BoomerangClient client = createClient(root.host, root.port)) {
-        client.connect();
-        if (!client.login(root.clientId, root.password)) {
-          System.err.println("Error: Authentication failed.");
-          return 1;
-        }
+      try (BoomerangClient client =
+          root.createClient(root.host, root.port, root.clientId, new String(root.password))) {
+        client.connect(); // SmartBoomerangClient handles login
         return executeWithClient(client);
       } catch (Exception e) {
         System.err.println("Error: " + e.getMessage());
@@ -263,17 +274,6 @@ public class BoomTool implements Runnable {
         current = current.parent();
       }
       return null;
-    }
-
-    /**
-     * Creates a new client instance. Can be overridden for testing.
-     *
-     * @param host server host
-     * @param port server port
-     * @return a new {@link BoomerangClient}
-     */
-    protected BoomerangClient createClient(String host, int port) {
-      return new BoomerangClient(host, port);
     }
 
     /**

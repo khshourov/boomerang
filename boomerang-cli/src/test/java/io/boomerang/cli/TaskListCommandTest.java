@@ -2,11 +2,12 @@ package io.boomerang.cli;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import io.boomerang.cli.client.BoomerangClient;
+import io.boomerang.client.BoomerangClient;
 import io.boomerang.proto.ListTasksRequest;
 import io.boomerang.proto.ListTasksResponse;
 import io.boomerang.proto.Status;
@@ -24,20 +25,27 @@ class TaskListCommandTest {
   @BeforeEach
   void setUp() {
     mockClient = mock(BoomerangClient.class);
-    cmd =
-        new TaskListCommand() {
+    root =
+        new BoomTool() {
           @Override
-          protected BoomerangClient createClient(String host, int port) {
+          protected BoomerangClient createClient(
+              String host, int port, String clientId, String password) {
             return mockClient;
           }
         };
-    root = new BoomTool();
+    cmd = new TaskListCommand();
   }
 
   @Test
   void shouldListTasksSuccessfully() throws Exception {
     // Arrange
-    when(mockClient.login(any(), any())).thenReturn(true);
+    doAnswer(
+            invocation -> {
+              mockClient.login(any(), any());
+              return null;
+            })
+        .when(mockClient)
+        .connect();
     TaskDetails task =
         TaskDetails.newBuilder()
             .setTaskId("task-1")
@@ -51,6 +59,7 @@ class TaskListCommandTest {
     IFactory factory =
         new IFactory() {
           @Override
+          @SuppressWarnings("unchecked")
           public <K> K create(Class<K> cls) throws Exception {
             if (cls == TaskListCommand.class) {
               return (K) cmd;
@@ -72,13 +81,13 @@ class TaskListCommandTest {
   @Test
   void shouldListTasksWithFilters() throws Exception {
     // Arrange
-    when(mockClient.login(any(), any())).thenReturn(true);
     ListTasksResponse response = ListTasksResponse.newBuilder().setStatus(Status.OK).build();
     when(mockClient.listTasks(any(ListTasksRequest.class))).thenReturn(response);
 
     IFactory factory =
         new IFactory() {
           @Override
+          @SuppressWarnings("unchecked")
           public <K> K create(Class<K> cls) throws Exception {
             if (cls == TaskListCommand.class) {
               return (K) cmd;
@@ -114,7 +123,6 @@ class TaskListCommandTest {
   @Test
   void shouldHandleListTasksFailure() throws Exception {
     // Arrange
-    when(mockClient.login(any(), any())).thenReturn(true);
     ListTasksResponse response =
         ListTasksResponse.newBuilder()
             .setStatus(Status.ERROR)
@@ -125,6 +133,7 @@ class TaskListCommandTest {
     IFactory factory =
         new IFactory() {
           @Override
+          @SuppressWarnings("unchecked")
           public <K> K create(Class<K> cls) throws Exception {
             if (cls == TaskListCommand.class) {
               return (K) cmd;

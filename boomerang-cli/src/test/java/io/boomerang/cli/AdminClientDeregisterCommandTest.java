@@ -2,12 +2,12 @@ package io.boomerang.cli;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import io.boomerang.cli.client.BoomerangClient;
-import io.boomerang.proto.BoomerangEnvelope;
+import io.boomerang.client.BoomerangClient;
 import io.boomerang.proto.ClientDeregistrationResponse;
 import io.boomerang.proto.Status;
 import org.junit.jupiter.api.BeforeEach;
@@ -23,29 +23,35 @@ class AdminClientDeregisterCommandTest {
   @BeforeEach
   void setUp() {
     mockClient = mock(BoomerangClient.class);
-    cmd =
-        new AdminClientDeregisterCommand() {
+    root =
+        new BoomTool() {
           @Override
-          protected BoomerangClient createClient(String host, int port) {
+          protected BoomerangClient createClient(
+              String host, int port, String clientId, String password) {
             return mockClient;
           }
         };
-    root = new BoomTool();
+    cmd = new AdminClientDeregisterCommand();
   }
 
   @Test
   void shouldDeregisterClientSuccessfully() throws Exception {
     // Arrange
-    when(mockClient.login(any(), any())).thenReturn(true);
+    doAnswer(
+            invocation -> {
+              mockClient.login(any(), any());
+              return null;
+            })
+        .when(mockClient)
+        .connect();
     ClientDeregistrationResponse response =
         ClientDeregistrationResponse.newBuilder().setStatus(Status.OK).build();
-    when(mockClient.sendRequest(any(BoomerangEnvelope.class)))
-        .thenReturn(
-            BoomerangEnvelope.newBuilder().setClientDeregistrationResponse(response).build());
+    when(mockClient.deregisterClient(any())).thenReturn(response);
 
     IFactory factory =
         new IFactory() {
           @Override
+          @SuppressWarnings("unchecked")
           public <K> K create(Class<K> cls) throws Exception {
             if (cls == AdminClientDeregisterCommand.class) {
               return (K) cmd;
@@ -70,7 +76,6 @@ class AdminClientDeregisterCommandTest {
     // Assert
     assertEquals(0, exitCode);
     verify(mockClient).connect();
-    verify(mockClient).login(any(), any());
-    verify(mockClient).sendRequest(any(BoomerangEnvelope.class));
+    verify(mockClient).deregisterClient(any());
   }
 }

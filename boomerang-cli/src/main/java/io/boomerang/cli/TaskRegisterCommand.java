@@ -1,7 +1,7 @@
 package io.boomerang.cli;
 
-import io.boomerang.cli.client.BoomerangClient;
-import io.boomerang.proto.BoomerangEnvelope;
+import io.boomerang.client.BoomerangClient;
+import io.boomerang.proto.RegistrationResponse;
 import io.boomerang.proto.Status;
 import io.boomerang.proto.Task;
 import java.nio.charset.Charset;
@@ -53,25 +53,16 @@ public class TaskRegisterCommand extends BoomTool.BaseCommand {
             .setRepeatIntervalMs(repeatIntervalMs)
             .build();
 
-    BoomerangEnvelope envelope =
-        BoomerangEnvelope.newBuilder().setRegistrationRequest(task).build();
+    RegistrationResponse response = client.register(task);
 
-    BoomerangEnvelope response = client.sendRequest(envelope);
-
-    if (response.hasRegistrationResponse()) {
-      var registration = response.getRegistrationResponse();
-      if (registration.getStatus() == Status.OK) {
-        System.out.printf("Task registered successfully! ID: %s%n", registration.getTaskId());
-        System.out.printf(
-            "Scheduled at:    %s (%d ms)%n",
-            Instant.ofEpochMilli(registration.getScheduledTimeMs()),
-            registration.getScheduledTimeMs());
-        return 0;
-      } else {
-        System.err.printf("Error registering task: %s%n", registration.getErrorMessage());
-      }
+    if (response.getStatus() == Status.OK) {
+      System.out.printf("Task registered successfully! ID: %s%n", response.getTaskId());
+      System.out.printf(
+          "Scheduled at:    %s (%d ms)%n",
+          Instant.ofEpochMilli(response.getScheduledTimeMs()), response.getScheduledTimeMs());
+      return 0;
     } else {
-      System.err.println("Error: Unexpected response from server.");
+      System.err.printf("Error registering task: %s%n", response.getErrorMessage());
     }
     return 1;
   }
