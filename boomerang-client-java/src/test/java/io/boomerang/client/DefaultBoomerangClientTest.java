@@ -286,6 +286,82 @@ class DefaultBoomerangClientTest {
   }
 
   @Test
+  void testRegisterClient() throws Exception {
+    addResponse(
+        BoomerangEnvelope.newBuilder()
+            .setAuthResponse(
+                AuthResponse.newBuilder().setStatus(Status.OK).setSessionId("s").build())
+            .build());
+    addResponse(
+        BoomerangEnvelope.newBuilder()
+            .setClientRegistrationResponse(
+                io.boomerang.proto.ClientRegistrationResponse.newBuilder()
+                    .setStatus(Status.OK)
+                    .build())
+            .build());
+
+    client.connect();
+    client.login("admin", "admin-pass");
+    var request =
+        io.boomerang.proto.ClientRegistrationRequest.newBuilder()
+            .setClientId("new-client")
+            .setPassword("new-pass")
+            .build();
+    var response = client.registerClient(request);
+    assertEquals(Status.OK, response.getStatus());
+  }
+
+  @Test
+  void testRegisterClientFailure() throws Exception {
+    addResponse(
+        BoomerangEnvelope.newBuilder()
+            .setAuthResponse(
+                AuthResponse.newBuilder().setStatus(Status.OK).setSessionId("s").build())
+            .build());
+    addResponse(
+        BoomerangEnvelope.newBuilder()
+            .setClientRegistrationResponse(
+                io.boomerang.proto.ClientRegistrationResponse.newBuilder()
+                    .setStatus(Status.UNAUTHORIZED)
+                    .setErrorMessage("Only admins can register clients")
+                    .build())
+            .build());
+
+    client.connect();
+    client.login("u", "p");
+    var request = io.boomerang.proto.ClientRegistrationRequest.newBuilder().build();
+    BoomerangException ex =
+        org.junit.jupiter.api.Assertions.assertThrows(
+            BoomerangException.class, () -> client.registerClient(request));
+    assertEquals(Status.UNAUTHORIZED, ex.getStatus().get());
+  }
+
+  @Test
+  void testDeregisterClient() throws Exception {
+    addResponse(
+        BoomerangEnvelope.newBuilder()
+            .setAuthResponse(
+                AuthResponse.newBuilder().setStatus(Status.OK).setSessionId("s").build())
+            .build());
+    addResponse(
+        BoomerangEnvelope.newBuilder()
+            .setClientDeregistrationResponse(
+                io.boomerang.proto.ClientDeregistrationResponse.newBuilder()
+                    .setStatus(Status.OK)
+                    .build())
+            .build());
+
+    client.connect();
+    client.login("admin", "admin-pass");
+    var request =
+        io.boomerang.proto.ClientDeregistrationRequest.newBuilder()
+            .setClientId("old-client")
+            .build();
+    var response = client.deregisterClient(request);
+    assertEquals(Status.OK, response.getStatus());
+  }
+
+  @Test
   void testUnexpectedResponse() throws Exception {
     addResponse(
         BoomerangEnvelope.newBuilder()

@@ -139,7 +139,8 @@ public class DefaultBoomerangClient implements BoomerangClient {
   @Override
   public ClientRegistrationResponse registerClient(ClientRegistrationRequest request)
       throws BoomerangException {
-    BoomerangEnvelope envelope = createEnvelope().toBuilder().setClientRegistration(request).build();
+    BoomerangEnvelope envelope =
+        createEnvelope().toBuilder().setClientRegistration(request).build();
     BoomerangEnvelope response = sendAndReceive(envelope);
     if (response.hasClientRegistrationResponse()) {
       checkStatus(
@@ -153,7 +154,8 @@ public class DefaultBoomerangClient implements BoomerangClient {
   @Override
   public ClientDeregistrationResponse deregisterClient(ClientDeregistrationRequest request)
       throws BoomerangException {
-    BoomerangEnvelope envelope = createEnvelope().toBuilder().setClientDeregistration(request).build();
+    BoomerangEnvelope envelope =
+        createEnvelope().toBuilder().setClientDeregistration(request).build();
     BoomerangEnvelope response = sendAndReceive(envelope);
     if (response.hasClientDeregistrationResponse()) {
       checkStatus(

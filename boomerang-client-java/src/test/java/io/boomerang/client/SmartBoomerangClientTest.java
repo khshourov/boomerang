@@ -136,4 +136,30 @@ class SmartBoomerangClientTest {
     assertEquals(response, smartClient.listTasks(request));
     verify(mockClient).listTasks(request);
   }
+
+  @Test
+  void testRegisterClientDelegation() {
+    BoomerangClient mockClient = mock(BoomerangClient.class);
+    SmartBoomerangClient smartClient = new SmartBoomerangClient(mockClient, "u", "p");
+    io.boomerang.proto.ClientRegistrationRequest request =
+        io.boomerang.proto.ClientRegistrationRequest.newBuilder().build();
+    io.boomerang.proto.ClientRegistrationResponse response =
+        io.boomerang.proto.ClientRegistrationResponse.newBuilder().setStatus(Status.OK).build();
+    when(mockClient.registerClient(request)).thenReturn(response);
+    assertEquals(response, smartClient.registerClient(request));
+    verify(mockClient).registerClient(request);
+  }
+
+  @Test
+  void testDeregisterClientDelegation() {
+    BoomerangClient mockClient = mock(BoomerangClient.class);
+    SmartBoomerangClient smartClient = new SmartBoomerangClient(mockClient, "u", "p");
+    io.boomerang.proto.ClientDeregistrationRequest request =
+        io.boomerang.proto.ClientDeregistrationRequest.newBuilder().build();
+    io.boomerang.proto.ClientDeregistrationResponse response =
+        io.boomerang.proto.ClientDeregistrationResponse.newBuilder().setStatus(Status.OK).build();
+    when(mockClient.deregisterClient(request)).thenReturn(response);
+    assertEquals(response, smartClient.deregisterClient(request));
+    verify(mockClient).deregisterClient(request);
+  }
 }
