@@ -98,9 +98,10 @@ public class BoomerangServerHandler extends SimpleChannelInboundHandler<Boomeran
       targetClientId = null;
     }
 
-    long scheduledAfter = request.getScheduledAfter();
+    long now = System.currentTimeMillis();
+    long scheduledAfter = now + request.getScheduledAfter();
     long scheduledBefore =
-        request.getScheduledBefore() > 0 ? request.getScheduledBefore() : Long.MAX_VALUE;
+        request.getScheduledBefore() > 0 ? now + request.getScheduledBefore() : Long.MAX_VALUE;
     Boolean isRecurring = request.hasIsRecurring() ? request.getIsRecurring() : null;
     int limit = request.getLimit() > 0 ? Math.min(request.getLimit(), 1000) : 100;
     String nextToken = request.getNextToken();
