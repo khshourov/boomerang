@@ -206,4 +206,27 @@ public class BoomerangBootstrap {
   public Timer getTimer() {
     return timer;
   }
+
+  /**
+   * Main entry point for the Boomerang server.
+   *
+   * @param args command line arguments
+   */
+  public static void main(String[] args) {
+    ServerConfig config = ServerConfig.load();
+    BoomerangBootstrap bootstrap = new BoomerangBootstrap(config);
+
+    Runtime.getRuntime()
+        .addShutdownHook(
+            new Thread(
+                () -> {
+                  try {
+                    bootstrap.close();
+                  } catch (Exception e) {
+                    log.error("Error during shutdown", e);
+                  }
+                }));
+
+    bootstrap.start();
+  }
 }

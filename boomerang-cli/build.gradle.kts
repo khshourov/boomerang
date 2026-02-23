@@ -1,6 +1,11 @@
 plugins {
-    id("org.graalvm.buildtools.native") version "0.10.1"
+    id("org.graalvm.buildtools.native") version "0.10.3"
     id("info.solidsoft.pitest")
+    id("application")
+}
+
+application {
+    mainClass.set("io.boomerang.cli.BoomTool")
 }
 
 dependencies {
@@ -22,12 +27,30 @@ dependencies {
     testImplementation("org.mockito:mockito-core:5.11.0")
 }
 
+java {
+    toolchain {
+        languageVersion.set(JavaLanguageVersion.of(21))
+        vendor.set(JvmVendorSpec.ORACLE)
+    }
+}
+
 graalvmNative {
+    toolchainDetection.set(false)
     binaries {
         named("main") {
+            javaLauncher.set(javaToolchains.launcherFor {
+                languageVersion.set(JavaLanguageVersion.of(21))
+                vendor.set(JvmVendorSpec.ORACLE)
+            })
             imageName.set("boomtool")
             mainClass.set("io.boomerang.cli.BoomTool")
-            buildArgs.add("--no-fallback")
+            buildArgs.addAll(
+                "--no-fallback",
+                "-march=native",
+                "--strict-image-heap",
+                "-H:+ReportExceptionStackTraces",
+                "--install-exit-handlers"
+            )
         }
     }
 }

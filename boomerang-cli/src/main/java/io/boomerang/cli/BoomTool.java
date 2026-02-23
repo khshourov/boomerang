@@ -51,14 +51,12 @@ public class BoomTool implements Runnable {
   @Option(
       names = {"-u", "--user"},
       description = "Client identifier",
-      required = true,
       scope = ScopeType.INHERIT)
   String clientId;
 
   @Option(
       names = {"-p", "--password"},
       description = "Client password",
-      required = true,
       interactive = true,
       arity = "0..1",
       scope = ScopeType.INHERIT)
@@ -74,6 +72,7 @@ public class BoomTool implements Runnable {
    */
   public static void main(String[] args) {
     CommandLine cmd = new CommandLine(new BoomTool());
+    cmd.setAllowSubcommandsAsOptionParameters(true);
     int exitCode = cmd.execute(args);
     System.exit(exitCode);
   }
@@ -81,6 +80,12 @@ public class BoomTool implements Runnable {
   @Override
   public void run() {
     // This is called when no subcommand is provided (Interactive Mode)
+    if (clientId == null || password == null) {
+      System.err.println("Error: Missing required options: '--user' and '--password' are required for interactive mode.");
+      CommandLine.usage(this, System.err);
+      return;
+    }
+
     System.out.println("Entering interactive mode. Type 'exit' to quit.");
 
     try (BoomerangClient client = new BoomerangClient(host, port)) {
@@ -224,7 +229,13 @@ public class BoomTool implements Runnable {
         }
       }
 
-      // One-shot mode: create, connect, login, execute, and close
+      // One-shot mode: validate options, create, connect, login, execute, and close
+      if (root.clientId == null || root.password == null) {
+        System.err.println("Error: Missing required options: '--user' and '--password' are required.");
+        CommandLine.usage(root, System.err);
+        return 1;
+      }
+
       try (BoomerangClient client = createClient(root.host, root.port)) {
         client.connect();
         if (!client.login(root.clientId, root.password)) {

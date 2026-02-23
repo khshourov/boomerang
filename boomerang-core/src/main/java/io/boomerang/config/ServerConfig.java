@@ -38,6 +38,20 @@ public class ServerConfig {
     }
   }
 
+  /**
+   * Loads the server configuration from the path specified in the environment or system
+   * properties.
+   *
+   * @return a new {@link ServerConfig} instance
+   */
+  public static ServerConfig load() {
+    String path = System.getenv("BOOMERANG_CONFIG");
+    if (path == null || path.isEmpty()) {
+      path = System.getProperty("BOOMERANG_CONFIG");
+    }
+    return new ServerConfig(path);
+  }
+
   private void loadFromClasspath() {
     try (var is = getClass().getClassLoader().getResourceAsStream("boomerang-server.properties")) {
       if (is != null) {

@@ -1,5 +1,10 @@
 plugins {
     id("info.solidsoft.pitest")
+    id("application")
+}
+
+application {
+    mainClass.set("io.boomerang.BoomerangBootstrap")
 }
 
 dependencies {

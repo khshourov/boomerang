@@ -47,7 +47,7 @@ This plan tracks the development of Boomerang, a high-performance, persistent sc
     - [ ] Implement full integration tests for `boomtool` against a live `BoomerangServer`.
     - [ ] Test one-shot/batch mode commands.
     - [ ] Test interactive REPL flow using terminal simulation.
-- [ ] **GraalVM Native Image:** Configure the build to produce a standalone CLI binary.
+- [x] **GraalVM Native Image:** Configure the build to produce a standalone CLI binary.
 - [ ] **Web Panel (Frontend):** Develop the React + TypeScript SPA.
 - [ ] **Management API:** Add specialized endpoints to the server to feed the dashboard.
 
