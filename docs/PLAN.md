@@ -56,10 +56,23 @@ This plan tracks the development of Boomerang, a high-performance, persistent sc
 - [ ] **Migrate CLI to SDK:**
     - [ ] Refactor `boomerang-cli` to use the `boomerang-client` library.
     - [ ] Remove duplicate communication logic from the CLI module.
-- [ ] **Web Panel (Frontend):** Develop the React + TypeScript SPA.
-- [ ] **Management API:** Add specialized endpoints to the server to feed the dashboard.
 
-## Phase 6: Performance & Validation
+## Phase 6: Management Web Panel
+- [ ] **Backend (Spring Boot):**
+    - [ ] Scaffold `boomerang-web-backend` as a standalone module.
+    - [ ] Integrate `boomerang-client-java` for all core communication.
+    - [ ] Implement REST API wrappers for all Boomerang commands (Register, Cancel, List, Get).
+    - [ ] Implement backend-side auth/session refresh using core's mechanism.
+    - [ ] Configure standard Spring Security (CORS, CSRF, Secure Auth).
+    - [ ] Implement real-time monitoring endpoints (WebSockets/SSE) for task activity.
+- [ ] **Frontend (React + TS):**
+    - [ ] Scaffold `boomerang-web-ui` as a separate React + TypeScript module.
+    - [ ] Implement Dashboard with real-time task status and performance monitoring.
+    - [ ] Implement Task Management views (List, Details, and Registration forms).
+    - [ ] Integrate with Backend REST APIs for management and real-time updates.
+    - [ ] Ensure separate build/deployment pipeline for the frontend SPA.
+
+## Phase 7: Performance & Validation
 - [ ] **Load Testing:** Verify concurrent task processing and timing accuracy.
 - [ ] **Fault Tolerance Testing:** Simulate server restarts and verify RocksDB recovery.
 - [ ] **Metrics & Telemetry:** Finalize Prometheus/Grafana integration.
