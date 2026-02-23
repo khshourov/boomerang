@@ -90,19 +90,46 @@ class DefaultBoomerangClientTest {
   }
 
   @Test
-  void testLoginFailure() throws Exception {
+  void testLoginFailureWithStatus() throws Exception {
     addResponse(
         BoomerangEnvelope.newBuilder()
             .setAuthResponse(
                 AuthResponse.newBuilder()
-                    .setStatus(Status.UNAUTHORIZED)
-                    .setErrorMessage("fail")
+                    .setStatus(Status.SESSION_EXPIRED)
+                    .setErrorMessage("expired")
                     .build())
             .build());
 
     client.connect();
-    org.junit.jupiter.api.Assertions.assertThrows(
-        BoomerangException.class, () -> client.login("u", "p"));
+    BoomerangException ex =
+        org.junit.jupiter.api.Assertions.assertThrows(
+            BoomerangException.class, () -> client.login("u", "p"));
+    assertTrue(ex.getStatus().isPresent());
+    assertEquals(Status.SESSION_EXPIRED, ex.getStatus().get());
+  }
+
+  @Test
+  void testRegisterTaskFailure() throws Exception {
+    addResponse(
+        BoomerangEnvelope.newBuilder()
+            .setAuthResponse(
+                AuthResponse.newBuilder().setStatus(Status.OK).setSessionId("s").build())
+            .build());
+    addResponse(
+        BoomerangEnvelope.newBuilder()
+            .setRegistrationResponse(
+                RegistrationResponse.newBuilder()
+                    .setStatus(Status.INVALID_REQUEST)
+                    .setErrorMessage("bad")
+                    .build())
+            .build());
+
+    client.connect();
+    client.login("u", "p");
+    BoomerangException ex =
+        org.junit.jupiter.api.Assertions.assertThrows(
+            BoomerangException.class, () -> client.register(Task.getDefaultInstance()));
+    assertEquals(Status.INVALID_REQUEST, ex.getStatus().get());
   }
 
   @Test
@@ -127,7 +154,7 @@ class DefaultBoomerangClientTest {
   }
 
   @Test
-  void testCancelTask() throws Exception {
+  void testCancelTaskSuccess() throws Exception {
     addResponse(
         BoomerangEnvelope.newBuilder()
             .setAuthResponse(
@@ -142,6 +169,76 @@ class DefaultBoomerangClientTest {
     client.connect();
     client.login("u", "p");
     assertTrue(client.cancel("t1"));
+  }
+
+  @Test
+  void testCancelTaskFailure() throws Exception {
+    addResponse(
+        BoomerangEnvelope.newBuilder()
+            .setAuthResponse(
+                AuthResponse.newBuilder().setStatus(Status.OK).setSessionId("s").build())
+            .build());
+    addResponse(
+        BoomerangEnvelope.newBuilder()
+            .setCancellationResponse(
+                io.boomerang.proto.CancellationResponse.newBuilder()
+                    .setStatus(Status.UNAUTHORIZED)
+                    .build())
+            .build());
+
+    client.connect();
+    client.login("u", "p");
+    BoomerangException ex =
+        org.junit.jupiter.api.Assertions.assertThrows(
+            BoomerangException.class, () -> client.cancel("t1"));
+    assertEquals(Status.UNAUTHORIZED, ex.getStatus().get());
+  }
+
+  @Test
+  void testGetTaskFailure() throws Exception {
+    addResponse(
+        BoomerangEnvelope.newBuilder()
+            .setAuthResponse(
+                AuthResponse.newBuilder().setStatus(Status.OK).setSessionId("s").build())
+            .build());
+    addResponse(
+        BoomerangEnvelope.newBuilder()
+            .setGetTaskResponse(
+                io.boomerang.proto.GetTaskResponse.newBuilder()
+                    .setStatus(Status.INVALID_REQUEST)
+                    .build())
+            .build());
+
+    client.connect();
+    client.login("u", "p");
+    BoomerangException ex =
+        org.junit.jupiter.api.Assertions.assertThrows(
+            BoomerangException.class, () -> client.getTask("t1"));
+    assertEquals(Status.INVALID_REQUEST, ex.getStatus().get());
+  }
+
+  @Test
+  void testListTasksFailure() throws Exception {
+    addResponse(
+        BoomerangEnvelope.newBuilder()
+            .setAuthResponse(
+                AuthResponse.newBuilder().setStatus(Status.OK).setSessionId("s").build())
+            .build());
+    addResponse(
+        BoomerangEnvelope.newBuilder()
+            .setListTasksResponse(
+                io.boomerang.proto.ListTasksResponse.newBuilder()
+                    .setStatus(Status.SESSION_EXPIRED)
+                    .build())
+            .build());
+
+    client.connect();
+    client.login("u", "p");
+    BoomerangException ex =
+        org.junit.jupiter.api.Assertions.assertThrows(
+            BoomerangException.class,
+            () -> client.listTasks(io.boomerang.proto.ListTasksRequest.newBuilder().build()));
+    assertEquals(Status.SESSION_EXPIRED, ex.getStatus().get());
   }
 
   @Test

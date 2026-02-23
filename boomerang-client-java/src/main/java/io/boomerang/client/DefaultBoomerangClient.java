@@ -67,13 +67,13 @@ public class DefaultBoomerangClient implements BoomerangClient {
     BoomerangEnvelope envelope = BoomerangEnvelope.newBuilder().setAuthHandshake(handshake).build();
 
     BoomerangEnvelope response = sendAndReceive(envelope);
-    if (response.hasAuthResponse() && response.getAuthResponse().getStatus() == Status.OK) {
+    if (response.hasAuthResponse()) {
+      checkStatus(
+          response.getAuthResponse().getStatus(), response.getAuthResponse().getErrorMessage());
       this.sessionId = response.getAuthResponse().getSessionId();
       log.debug("Successfully logged in with clientId: {}", clientId);
     } else {
-      String error =
-          response.hasAuthResponse() ? response.getAuthResponse().getErrorMessage() : "Unknown";
-      throw new BoomerangException("Login failed: " + error);
+      throw new BoomerangException("Unexpected response type: " + response.getPayloadCase());
     }
   }
 
@@ -82,6 +82,9 @@ public class DefaultBoomerangClient implements BoomerangClient {
     BoomerangEnvelope envelope = createEnvelope().toBuilder().setRegistrationRequest(task).build();
     BoomerangEnvelope response = sendAndReceive(envelope);
     if (response.hasRegistrationResponse()) {
+      checkStatus(
+          response.getRegistrationResponse().getStatus(),
+          response.getRegistrationResponse().getErrorMessage());
       return response.getRegistrationResponse();
     }
     throw new BoomerangException("Unexpected response type: " + response.getPayloadCase());
@@ -94,6 +97,9 @@ public class DefaultBoomerangClient implements BoomerangClient {
         createEnvelope().toBuilder().setCancellationRequest(request).build();
     BoomerangEnvelope response = sendAndReceive(envelope);
     if (response.hasCancellationResponse()) {
+      checkStatus(
+          response.getCancellationResponse().getStatus(),
+          response.getCancellationResponse().getErrorMessage());
       return response.getCancellationResponse().getStatus() == Status.OK;
     }
     throw new BoomerangException("Unexpected response type: " + response.getPayloadCase());
@@ -105,6 +111,9 @@ public class DefaultBoomerangClient implements BoomerangClient {
     BoomerangEnvelope envelope = createEnvelope().toBuilder().setGetTaskRequest(request).build();
     BoomerangEnvelope response = sendAndReceive(envelope);
     if (response.hasGetTaskResponse()) {
+      checkStatus(
+          response.getGetTaskResponse().getStatus(),
+          response.getGetTaskResponse().getErrorMessage());
       return response.getGetTaskResponse();
     }
     throw new BoomerangException("Unexpected response type: " + response.getPayloadCase());
@@ -115,9 +124,18 @@ public class DefaultBoomerangClient implements BoomerangClient {
     BoomerangEnvelope envelope = createEnvelope().toBuilder().setListTasksRequest(request).build();
     BoomerangEnvelope response = sendAndReceive(envelope);
     if (response.hasListTasksResponse()) {
+      checkStatus(
+          response.getListTasksResponse().getStatus(),
+          response.getListTasksResponse().getErrorMessage());
       return response.getListTasksResponse();
     }
     throw new BoomerangException("Unexpected response type: " + response.getPayloadCase());
+  }
+
+  private void checkStatus(Status status, String errorMessage) {
+    if (status != Status.OK) {
+      throw new BoomerangException(status, errorMessage);
+    }
   }
 
   private BoomerangEnvelope createEnvelope() {

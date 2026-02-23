@@ -87,4 +87,24 @@ class HttpCallbackReceiverTest {
       assertEquals(405, response.statusCode());
     }
   }
+
+  @Test
+  void testBadRequest() throws Exception {
+    int port = 12358;
+    try (HttpCallbackReceiver receiver = new HttpCallbackReceiver(port, "/", r -> null)) {
+      receiver.start();
+      java.net.http.HttpClient client = java.net.http.HttpClient.newHttpClient();
+      // Send an envelope with NO callback request
+      io.boomerang.proto.BoomerangEnvelope envelope =
+          io.boomerang.proto.BoomerangEnvelope.newBuilder().build();
+      java.net.http.HttpRequest request =
+          java.net.http.HttpRequest.newBuilder()
+              .uri(java.net.URI.create("http://localhost:" + port + "/"))
+              .POST(java.net.http.HttpRequest.BodyPublishers.ofByteArray(envelope.toByteArray()))
+              .build();
+      java.net.http.HttpResponse<Void> response =
+          client.send(request, java.net.http.HttpResponse.BodyHandlers.discarding());
+      assertEquals(400, response.statusCode());
+    }
+  }
 }

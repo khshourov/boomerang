@@ -70,7 +70,7 @@ public class SmartBoomerangClient implements BoomerangClient {
       ensureLoggedIn();
       return action.execute();
     } catch (BoomerangException e) {
-      if (e.getMessage().contains("SESSION_EXPIRED") || e.getMessage().contains("UNAUTHORIZED")) {
+      if (isRetryable(e)) {
         log.warn("Session expired or unauthorized. Attempting to re-login and retry...");
         loggedIn = false;
         ensureLoggedIn();
@@ -78,6 +78,15 @@ public class SmartBoomerangClient implements BoomerangClient {
       }
       throw e;
     }
+  }
+
+  private boolean isRetryable(BoomerangException e) {
+    return e.getStatus()
+        .map(
+            s ->
+                s == io.boomerang.proto.Status.SESSION_EXPIRED
+                    || s == io.boomerang.proto.Status.UNAUTHORIZED)
+        .orElse(false);
   }
 
   @FunctionalInterface

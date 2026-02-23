@@ -24,7 +24,8 @@ public class TcpCallbackReceiver implements CallbackReceiver {
   private final int port;
   private final CallbackHandler handler;
   private ServerSocket serverSocket;
-  private ExecutorService executorService;
+  private ExecutorService workerPool;
+  private Thread acceptorThread;
   private volatile boolean running;
 
   public TcpCallbackReceiver(int port, CallbackHandler handler) {
@@ -36,11 +37,12 @@ public class TcpCallbackReceiver implements CallbackReceiver {
   public void start() throws BoomerangException {
     try {
       serverSocket = new ServerSocket(port);
-      executorService = Executors.newCachedThreadPool();
+      workerPool = Executors.newCachedThreadPool();
       running = true;
       log.info("TCP Callback Receiver started on port {}", port);
 
-      executorService.submit(this::acceptConnections);
+      acceptorThread = new Thread(this::acceptConnections, "tcp-callback-acceptor-" + port);
+      acceptorThread.start();
     } catch (IOException e) {
       throw new BoomerangException("Failed to start TCP receiver on port " + port, e);
     }
@@ -50,7 +52,7 @@ public class TcpCallbackReceiver implements CallbackReceiver {
     while (running) {
       try {
         Socket clientSocket = serverSocket.accept();
-        executorService.submit(() -> handleConnection(clientSocket));
+        workerPool.submit(() -> handleConnection(clientSocket));
       } catch (IOException e) {
         if (running) {
           log.error("Error accepting connection", e);
@@ -92,9 +94,12 @@ public class TcpCallbackReceiver implements CallbackReceiver {
       if (serverSocket != null) {
         serverSocket.close();
       }
-      if (executorService != null) {
-        executorService.shutdown();
-        executorService.awaitTermination(5, TimeUnit.SECONDS);
+      if (acceptorThread != null) {
+        acceptorThread.interrupt();
+      }
+      if (workerPool != null) {
+        workerPool.shutdown();
+        workerPool.awaitTermination(5, TimeUnit.SECONDS);
       }
     } catch (IOException | InterruptedException e) {
       log.warn("Error closing TCP receiver", e);

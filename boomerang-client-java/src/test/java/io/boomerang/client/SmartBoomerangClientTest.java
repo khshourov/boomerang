@@ -40,7 +40,7 @@ class SmartBoomerangClientTest {
 
     // First call throws SESSION_EXPIRED
     when(mockClient.register(task))
-        .thenThrow(new BoomerangException("SESSION_EXPIRED"))
+        .thenThrow(new BoomerangException(Status.SESSION_EXPIRED, "expired"))
         .thenReturn(okResponse);
 
     smartClient.register(task);
@@ -51,11 +51,32 @@ class SmartBoomerangClientTest {
   }
 
   @Test
-  void testNoRetryOnOtherErrors() {
+  void testRetryOnUnauthorized() {
+    BoomerangClient mockClient = mock(BoomerangClient.class);
+    SmartBoomerangClient smartClient = new SmartBoomerangClient(mockClient, "user", "pass");
+
+    Task task = Task.getDefaultInstance();
+    RegistrationResponse okResponse =
+        RegistrationResponse.newBuilder().setStatus(Status.OK).build();
+
+    // First call throws UNAUTHORIZED
+    when(mockClient.register(task))
+        .thenThrow(new BoomerangException(Status.UNAUTHORIZED, "expired"))
+        .thenReturn(okResponse);
+
+    smartClient.register(task);
+
+    // Initial login + re-login after UNAUTHORIZED
+    verify(mockClient, times(2)).login("user", "pass");
+    verify(mockClient, times(2)).register(task);
+  }
+
+  @Test
+  void testNoRetryOnNoStatus() {
     BoomerangClient mockClient = mock(BoomerangClient.class);
     SmartBoomerangClient smartClient = new SmartBoomerangClient(mockClient, "u", "p");
     when(mockClient.register(io.boomerang.proto.Task.getDefaultInstance()))
-        .thenThrow(new BoomerangException("OTHER_ERROR"));
+        .thenThrow(new BoomerangException("COMMUNICATION_ERROR"));
 
     org.junit.jupiter.api.Assertions.assertThrows(
         BoomerangException.class,
