@@ -275,5 +275,38 @@ public class BoomTool implements Runnable {
     protected BoomerangClient createClient(String host, int port) {
       return new BoomerangClient(host, port);
     }
+
+    /**
+     * Parses a compact interval string (e.g., "5m", "1h", "10s") into milliseconds.
+     *
+     * @param interval the interval string to parse
+     * @return the total duration in milliseconds
+     * @throws IllegalArgumentException if the format is invalid
+     */
+    protected long parseIntervalToMs(String interval) {
+      java.util.regex.Pattern pattern = java.util.regex.Pattern.compile("(\\d+)([smhd])");
+      java.util.regex.Matcher matcher = pattern.matcher(interval.toLowerCase());
+      long totalMs = 0;
+      boolean found = false;
+      while (matcher.find()) {
+        found = true;
+        long value = Long.parseLong(matcher.group(1));
+        String unit = matcher.group(2);
+        switch (unit) {
+          case "s" -> totalMs += value * 1000;
+          case "m" -> totalMs += value * 60 * 1000;
+          case "h" -> totalMs += value * 60 * 60 * 1000;
+          case "d" -> totalMs += value * 24 * 60 * 60 * 1000;
+        }
+      }
+      if (!found) {
+        try {
+          return Long.parseLong(interval);
+        } catch (NumberFormatException e) {
+          throw new IllegalArgumentException("Invalid interval format: " + interval);
+        }
+      }
+      return totalMs;
+    }
   }
 }

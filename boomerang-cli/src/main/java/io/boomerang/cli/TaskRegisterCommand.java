@@ -5,6 +5,7 @@ import io.boomerang.proto.BoomerangEnvelope;
 import io.boomerang.proto.Status;
 import io.boomerang.proto.Task;
 import java.nio.charset.Charset;
+import java.time.Instant;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 
@@ -24,15 +25,15 @@ public class TaskRegisterCommand extends BoomTool.BaseCommand {
 
   @Option(
       names = {"-d", "--delay"},
-      description = "Delay from registration in milliseconds",
+      description = "Delay from registration (e.g., 5000, 5m, 1h)",
       required = true)
-  long delayMs;
+  String delay;
 
   @Option(
       names = {"-r", "--repeat"},
-      description = "Repeat interval in milliseconds (0 for no repetition)",
+      description = "Repeat interval (e.g., 10000, 10s, 1m). 0 for no repetition",
       defaultValue = "0")
-  long repeatIntervalMs;
+  String repeat;
 
   @Option(
       names = {"-c", "--charset"},
@@ -42,6 +43,9 @@ public class TaskRegisterCommand extends BoomTool.BaseCommand {
 
   @Override
   protected Integer executeWithClient(BoomerangClient client) throws Exception {
+    long delayMs = parseIntervalToMs(delay);
+    long repeatIntervalMs = parseIntervalToMs(repeat);
+
     Task task =
         Task.newBuilder()
             .setPayload(com.google.protobuf.ByteString.copyFrom(payload, Charset.forName(charset)))
@@ -58,7 +62,10 @@ public class TaskRegisterCommand extends BoomTool.BaseCommand {
       var registration = response.getRegistrationResponse();
       if (registration.getStatus() == Status.OK) {
         System.out.printf("Task registered successfully! ID: %s%n", registration.getTaskId());
-        System.out.printf("Scheduled for: %d ms%n", registration.getScheduledTimeMs());
+        System.out.printf(
+            "Scheduled at:    %s (%d ms)%n",
+            Instant.ofEpochMilli(registration.getScheduledTimeMs()),
+            registration.getScheduledTimeMs());
         return 0;
       } else {
         System.err.printf("Error registering task: %s%n", registration.getErrorMessage());

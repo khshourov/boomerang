@@ -6,8 +6,6 @@ import io.boomerang.proto.ListTasksResponse;
 import io.boomerang.proto.Status;
 import io.boomerang.proto.TaskDetails;
 import java.time.Instant;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 
@@ -73,10 +71,10 @@ public class TaskListCommand extends BoomTool.BaseCommand {
         requestBuilder.setClientId(clientId);
       }
       if (after != null) {
-        requestBuilder.setScheduledAfter(parseIntervalToEpoch(after));
+        requestBuilder.setScheduledAfter(parseIntervalToMs(after));
       }
       if (before != null) {
-        requestBuilder.setScheduledBefore(parseIntervalToEpoch(before));
+        requestBuilder.setScheduledBefore(parseIntervalToMs(before));
       }
       if (recurring != null) {
         requestBuilder.setIsRecurring(recurring);
@@ -107,29 +105,5 @@ public class TaskListCommand extends BoomTool.BaseCommand {
     }
 
     return 0;
-  }
-
-  private long parseIntervalToEpoch(String interval) {
-    Pattern pattern = Pattern.compile("(\\d+)([smhd])");
-    Matcher matcher = pattern.matcher(interval.toLowerCase());
-    long totalMs = 0;
-    while (matcher.find()) {
-      long value = Long.parseLong(matcher.group(1));
-      String unit = matcher.group(2);
-      switch (unit) {
-        case "s" -> totalMs += value * 1000;
-        case "m" -> totalMs += value * 60 * 1000;
-        case "h" -> totalMs += value * 60 * 60 * 1000;
-        case "d" -> totalMs += value * 24 * 60 * 60 * 1000;
-      }
-    }
-    if (totalMs == 0) {
-      try {
-        return Long.parseLong(interval);
-      } catch (NumberFormatException e) {
-        throw new IllegalArgumentException("Invalid interval format: " + interval);
-      }
-    }
-    return Instant.now().toEpochMilli() + totalMs;
   }
 }
