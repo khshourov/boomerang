@@ -39,8 +39,7 @@ public class ServerConfig {
   }
 
   /**
-   * Loads the server configuration from the path specified in the environment or system
-   * properties.
+   * Loads the server configuration from the path specified in the environment or system properties.
    *
    * @return a new {@link ServerConfig} instance
    */
