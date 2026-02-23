@@ -162,4 +162,13 @@ class SmartBoomerangClientTest {
     assertEquals(response, smartClient.deregisterClient(request));
     verify(mockClient).deregisterClient(request);
   }
+
+  @Test
+  void testGetSessionIdDelegation() {
+    BoomerangClient mockClient = mock(BoomerangClient.class);
+    SmartBoomerangClient smartClient = new SmartBoomerangClient(mockClient, "u", "p");
+    when(mockClient.getSessionId()).thenReturn("session-123");
+    assertEquals("session-123", smartClient.getSessionId());
+    verify(mockClient).getSessionId();
+  }
 }

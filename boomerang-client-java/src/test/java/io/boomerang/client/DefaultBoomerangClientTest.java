@@ -90,6 +90,20 @@ class DefaultBoomerangClientTest {
   }
 
   @Test
+  void testGetSessionId() throws Exception {
+    addResponse(
+        BoomerangEnvelope.newBuilder()
+            .setAuthResponse(
+                AuthResponse.newBuilder().setStatus(Status.OK).setSessionId("test-session").build())
+            .build());
+
+    client.connect();
+    client.login("client-1", "pass-1");
+
+    assertEquals("test-session", client.getSessionId());
+  }
+
+  @Test
   void testLoginFailureWithStatus() throws Exception {
     addResponse(
         BoomerangEnvelope.newBuilder()

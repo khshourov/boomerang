@@ -89,6 +89,13 @@ public interface BoomerangClient extends AutoCloseable {
   ClientDeregistrationResponse deregisterClient(ClientDeregistrationRequest request)
       throws BoomerangException;
 
+  /**
+   * Gets the current session ID.
+   *
+   * @return the session ID, or {@code null} if not logged in
+   */
+  String getSessionId();
+
   /** Closes the client and releases any associated resources. */
   @Override
   void close();

@@ -81,6 +81,11 @@ public class SmartBoomerangClient implements BoomerangClient {
     return executeWithRetry(() -> delegate.deregisterClient(request));
   }
 
+  @Override
+  public String getSessionId() {
+    return delegate.getSessionId();
+  }
+
   private <T> T executeWithRetry(ClientAction<T> action) throws BoomerangException {
     try {
       ensureLoggedIn();

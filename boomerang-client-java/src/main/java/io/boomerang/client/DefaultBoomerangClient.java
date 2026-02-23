@@ -166,6 +166,11 @@ public class DefaultBoomerangClient implements BoomerangClient {
     throw new BoomerangException("Unexpected response type: " + response.getPayloadCase());
   }
 
+  @Override
+  public String getSessionId() {
+    return sessionId;
+  }
+
   private void checkStatus(Status status, String errorMessage) {
     if (status != Status.OK) {
       throw new BoomerangException(status, errorMessage);
