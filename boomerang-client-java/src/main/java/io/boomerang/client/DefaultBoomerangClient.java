@@ -41,6 +41,23 @@ public class DefaultBoomerangClient implements BoomerangClient {
     this.port = port;
   }
 
+  /**
+   * Constructor for a client that already has a session ID.
+   *
+   * <p>Warning: Do not call {@link #login(String, String)} when using this constructor, as it
+   * presumes login has already occurred. If you need to log in, use {@link
+   * #DefaultBoomerangClient(String, int)} instead.
+   *
+   * @param host the server host
+   * @param port the server port
+   * @param sessionId the existing session ID
+   */
+  public DefaultBoomerangClient(String host, int port, String sessionId) {
+    this.host = host;
+    this.port = port;
+    this.sessionId = sessionId;
+  }
+
   /** Constructor for testing. */
   DefaultBoomerangClient(String host, int port, Socket socket) {
     this.host = host;
