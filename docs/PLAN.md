@@ -58,12 +58,12 @@ This plan tracks the development of Boomerang, a high-performance, persistent sc
     - [x] Remove duplicate communication logic from the CLI module.
 
 ## Phase 6: Management Web Panel
-- [ ] **Backend (Spring Boot):**
-    - [ ] Scaffold `boomerang-web-backend` as a standalone module.
-    - [ ] Integrate `boomerang-client-java` for all core communication.
-    - [ ] Implement REST API wrappers for all Boomerang commands (Register, Cancel, List, Get).
-    - [ ] Implement backend-side auth/session refresh using core's mechanism.
-    - [ ] Configure standard Spring Security (CORS, CSRF, Secure Auth).
+- [x] **Backend (Spring Boot):**
+    - [x] Scaffold `boomerang-web-backend` as a standalone module.
+    - [x] Integrate `boomerang-client-java` for all core communication.
+    - [x] Implement REST API wrappers for all Boomerang commands (Register, Cancel, List, Get).
+    - [x] Implement backend-side auth/session refresh using core's mechanism.
+    - [x] Configure standard Spring Security (CORS, CSRF, Secure Auth).
     - [ ] Implement real-time monitoring endpoints (WebSockets/SSE) for task activity.
 - [ ] **Frontend (React + TS):**
     - [ ] Scaffold `boomerang-web-ui` as a separate React + TypeScript module.
