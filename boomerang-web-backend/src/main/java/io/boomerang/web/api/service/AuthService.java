@@ -29,7 +29,7 @@ public class AuthService {
     try (BoomerangClient client = clientProvider.createClient()) {
       client.connect();
       client.login(request.clientId(), request.password());
-      return new LoginResponse(client.getSessionId());
+      return new LoginResponse(client.getSessionId(), request.clientId());
     } catch (Exception e) {
       if (e instanceof BoomerangException) {
         throw (BoomerangException) e;

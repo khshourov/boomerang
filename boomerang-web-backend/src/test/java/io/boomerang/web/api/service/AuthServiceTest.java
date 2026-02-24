@@ -31,6 +31,7 @@ class AuthServiceTest {
     LoginResponse response = authService.login(request);
 
     assertThat(response.sessionId()).isEqualTo("session-123");
+    assertThat(response.clientId()).isEqualTo("user");
     verify(client).connect();
     verify(client).login("user", "pass");
   }

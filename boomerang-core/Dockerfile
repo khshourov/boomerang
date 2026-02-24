@@ -30,6 +30,9 @@ RUN ./gradlew :boomerang-core:installDist --no-daemon
 FROM eclipse-temurin:21-jre-jammy
 WORKDIR /app
 
+# Install netcat for health checks
+RUN apt-get update && apt-get install -y netcat-openbsd && rm -rf /var/lib/apt/lists/*
+
 # Create a non-root user for security
 RUN groupadd -r boomerang && useradd -r -g boomerang boomerang \
     && mkdir -p /app/data && chown -R boomerang:boomerang /app/data

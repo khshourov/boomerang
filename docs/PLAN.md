@@ -65,12 +65,12 @@ This plan tracks the development of Boomerang, a high-performance, persistent sc
     - [x] Implement backend-side auth/session refresh using core's mechanism.
     - [x] Configure standard Spring Security (CORS, CSRF, Secure Auth).
     - [ ] Implement real-time monitoring endpoints (WebSockets/SSE) for task activity.
-- [ ] **Frontend (React + TS):**
-    - [ ] Scaffold `boomerang-web-ui` as a separate React + TypeScript module.
+- [x] **Frontend (React + TS):**
+    - [x] Scaffold `boomerang-web-ui` as a separate React + TypeScript module.
     - [ ] Implement Dashboard with real-time task status and performance monitoring.
-    - [ ] Implement Task Management views (List, Details, and Registration forms).
-    - [ ] Integrate with Backend REST APIs for management and real-time updates.
-    - [ ] Ensure separate build/deployment pipeline for the frontend SPA.
+    - [x] Implement Task Management views (List, Details, and Registration forms).
+    - [x] Integrate with Backend REST APIs for management and real-time updates.
+    - [x] Ensure separate build/deployment pipeline for the frontend SPA.
 
 ## Phase 7: Performance & Validation
 - [ ] **Load Testing:** Verify concurrent task processing and timing accuracy.

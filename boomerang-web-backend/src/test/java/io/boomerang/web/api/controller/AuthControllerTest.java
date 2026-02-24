@@ -29,7 +29,7 @@ class AuthControllerTest {
   @Test
   void testLoginSuccess() throws Exception {
     when(authService.login(any(LoginRequest.class)))
-        .thenReturn(new LoginResponse("test-session-id"));
+        .thenReturn(new LoginResponse("test-session-id", "user"));
 
     mockMvc
         .perform(
@@ -37,7 +37,8 @@ class AuthControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"clientId\":\"user\", \"password\":\"pass\"}"))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.sessionId").value("test-session-id"));
+        .andExpect(jsonPath("$.sessionId").value("test-session-id"))
+        .andExpect(jsonPath("$.clientId").value("user"));
   }
 
   @Test
