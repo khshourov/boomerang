@@ -43,7 +43,7 @@ class AuthControllerTest {
   @Test
   void testLoginFailure() throws Exception {
     when(authService.login(any(LoginRequest.class)))
-        .thenThrow(new BoomerangException("Auth failed"));
+        .thenThrow(new BoomerangException("Login failed: Invalid credentials"));
 
     mockMvc
         .perform(

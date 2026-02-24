@@ -51,7 +51,7 @@ class TaskControllerTest {
             post("/api/tasks")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"payload\":\"dGVzdC1wYXlsb2Fk\", \"delayMs\":1000}"))
-        .andExpect(status().isUnauthorized());
+        .andExpect(status().isForbidden());
   }
 
   @Test
@@ -92,5 +92,19 @@ class TaskControllerTest {
     mockMvc
         .perform(get("/api/tasks").header("X-Boomerang-Session-Id", "test-session"))
         .andExpect(status().isOk());
+  }
+
+  @Test
+  void testTaskServiceException() throws Exception {
+    when(taskService.register(anyString(), any(TaskRequest.class)))
+        .thenThrow(new io.boomerang.client.BoomerangException("Task already exists"));
+
+    mockMvc
+        .perform(
+            post("/api/tasks")
+                .header("X-Boomerang-Session-Id", "test-session")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"payload\":\"dGVzdC1wYXlsb2Fk\", \"delayMs\":1000}"))
+        .andExpect(status().isInternalServerError());
   }
 }

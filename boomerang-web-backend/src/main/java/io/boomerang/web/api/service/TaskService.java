@@ -16,11 +16,23 @@ import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+/**
+ * Service for managing Boomerang tasks.
+ *
+ * <p>This service interacts with the Boomerang core server using a session-aware client.
+ */
 @Service
 public class TaskService {
 
   @Autowired private BoomerangClientProvider clientProvider;
 
+  /**
+   * Registers a new task.
+   *
+   * @param sessionId the session ID
+   * @param taskDto the {@link TaskRequest} with task details
+   * @return the {@link TaskResponse} from the server
+   */
   public TaskResponse register(String sessionId, TaskRequest taskDto) {
     try (BoomerangClient client = getClient(sessionId)) {
       Task.Builder taskBuilder = Task.newBuilder();
@@ -39,12 +51,26 @@ public class TaskService {
     }
   }
 
+  /**
+   * Cancels a task.
+   *
+   * @param sessionId the session ID
+   * @param taskId the task ID to cancel
+   * @return {@code true} if successful, {@code false} otherwise
+   */
   public boolean cancel(String sessionId, String taskId) {
     try (BoomerangClient client = getClient(sessionId)) {
       return client.cancel(taskId);
     }
   }
 
+  /**
+   * Retrieves a specific task.
+   *
+   * @param sessionId the session ID
+   * @param taskId the task ID to retrieve
+   * @return the {@link GetTaskResponse} with task details
+   */
   public GetTaskResponse getTask(String sessionId, String taskId) {
     try (BoomerangClient client = getClient(sessionId)) {
       io.boomerang.proto.GetTaskResponse response = client.getTask(taskId);
@@ -55,6 +81,17 @@ public class TaskService {
     }
   }
 
+  /**
+   * Lists tasks with optional filters.
+   *
+   * @param sessionId the session ID
+   * @param clientId optional client ID
+   * @param scheduledAfter optional start time
+   * @param scheduledBefore optional end time
+   * @param limit optional limit
+   * @param nextToken optional pagination token
+   * @return the {@link ListTasksResponse}
+   */
   public ListTasksResponse listTasks(
       String sessionId,
       String clientId,
